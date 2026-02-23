@@ -1,0 +1,28 @@
+@import "tailwindcss";
+
+@theme {
+  --font-pixel: "Press Start 2P", system-ui, sans-serif;
+  --color-neon-cyan: #00ffff;
+  --color-neon-magenta: #ff00ff;
+  --color-neon-yellow: #ffff00;
+  --color-neon-green: #00ff00;
+  --color-neon-gold: #ffd700;
+  --color-game-bg: #0a0a1a;
+}
+
+@font-face {
+  font-family: "Press Start 2P";
+  src: url("/fonts/PressStart2P-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+body {
+  background-color: var(--color-game-bg);
+  color: white;
+  font-family: var(--font-pixel);
+  margin: 0;
+  overflow: hidden;
+  user-select: none;
+}
