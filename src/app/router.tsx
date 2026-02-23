@@ -1,10 +1,10 @@
-import { useGameStore } from '../shared/stores/gameStore'
-import { SongUploadScreen } from '../features/song-upload/SongUploadScreen'
-import { AnalyzingScreen } from '../features/beat-analysis/AnalyzingScreen'
-import { GameplayScreen } from '../features/gameplay/GameplayScreen'
-import { ResultsScreen } from '../features/results/ResultsScreen'
-import { Layout } from '../features/shared-ui/Layout'
-import { Button } from '@/components/ui/button'
+import { useGameStore } from '@/state/gameStore'
+import { SongUploadScreen } from '@/features/song-upload/presentation/SongUploadScreen'
+import { AnalyzingScreen } from '@/features/analysis/presentation/AnalyzingScreen'
+import { GameplayScreen } from '@/features/gameplay/presentation/GameplayScreen'
+import { ResultsScreen } from '@/features/scoring/presentation/ResultsScreen'
+import { Layout } from '@/core/ui/Layout'
+import { Button } from '@/core/ui/button'
 
 export function AppRouter() {
     const phase = useGameStore((state) => state.phase)
