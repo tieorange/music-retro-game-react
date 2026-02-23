@@ -26,7 +26,7 @@ export function AppRouter() {
                             {mode === 'trackpad' ? 'Trackpad Only: tap/click or press any lane key.' : 'Classic: use D / F / J / K.'}
                         </p>
                         <p className="text-slate-400 uppercase tracking-wider">Difficulty: {difficulty}</p>
-                        <Button size="lg" onClick={() => setPhase('playing')} className="bg-neon-cyan hover:bg-neon-cyan/80 text-black">
+                        <Button size="lg" onClick={() => setPhase('countdown')} className="bg-neon-cyan hover:bg-neon-cyan/80 text-black">
                             PLAY NOW
                         </Button>
                     </div>

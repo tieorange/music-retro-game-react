@@ -33,5 +33,5 @@ export function applyGameEffects(stage: Container) {
     // Note: in v8, filters array assignment is strict, might need to cast or apply directly
     stage.filters = [bloom, crt, glitch] as any;
 
-    return { crt, glitch };
+    return { bloom, crt, glitch };
 }

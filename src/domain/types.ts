@@ -8,8 +8,9 @@ export interface Song {
 
 export interface BeatAnalysis {
     bpm: number;
-    beats: number[];         // timestamps in seconds
-    confidence: number;      // 0-1
+    beats: number[];          // timestamps in seconds
+    confidence: number;       // 0-1
+    beatStrengths?: number[]; // onset strength per beat, parallel array to beats
 }
 
 export interface BeatMap {
@@ -79,3 +80,39 @@ export interface GameState {
     finalScore: GameScore | null;
     highScores: GameScore[];
 }
+
+export interface HitEvent {
+    judgment: HitJudgment;
+    lane: Lane;
+    combo: number;
+    multiplier: number;
+}
+
+export interface MissEvent {
+    lane: Lane;
+}
+
+export interface NearMissEvent {
+    lane: Lane;
+}
+
+export interface GhostPressEvent {
+    lane: Lane;
+}
+
+export interface ComboMilestoneEvent {
+    combo: number;
+}
+
+export interface ComboBreakEvent {
+    previousCombo: number;
+}
+
+export type GameEvent =
+    | { type: 'hit'; data: HitEvent }
+    | { type: 'miss'; data: MissEvent }
+    | { type: 'near-miss'; data: NearMissEvent }
+    | { type: 'ghost-press'; data: GhostPressEvent }
+    | { type: 'combo-milestone'; data: ComboMilestoneEvent }
+    | { type: 'combo-break'; data: ComboBreakEvent }
+    | { type: 'beat'; data: { time: number } };

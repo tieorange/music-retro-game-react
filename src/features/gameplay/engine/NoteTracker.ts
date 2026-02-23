@@ -10,9 +10,9 @@ export interface ActiveNote extends Note {
 export class NoteTracker {
     private active: Map<string, ActiveNote> = new Map();
     private maxMissTime = TIMING_WINDOWS.good / 1000; // seconds
-    private onMissCallback: (noteId: string) => void;
+    private onMissCallback: (noteId: string, lane: Lane) => void;
 
-    constructor(notes: Note[], onMiss: (noteId: string) => void) {
+    constructor(notes: Note[], onMiss: (noteId: string, lane: Lane) => void) {
         // We don't need 'notes' array anymore since scheduler spawns them dynamically
         // But we keep the signature for compatibility or future use, so we just log it or ignore
         console.debug(`NoteTracker initialized with ${notes.length} notes`);
@@ -34,7 +34,7 @@ export class NoteTracker {
             if (!activeNote.isHit && !activeNote.isMissed) {
                 if (currentTime > activeNote.time + this.maxMissTime) {
                     activeNote.isMissed = true;
-                    this.onMissCallback(activeNote.id);
+                    this.onMissCallback(activeNote.id, activeNote.lane);
                     // We can remove it from active after some time, or let it fall off screen
                     // For now, let the renderer remove it when it's way past
                     this.active.delete(id);
@@ -82,6 +82,21 @@ export class NoteTracker {
         }
 
         return null;
+    }
+
+    public getNearestNoteDelta(lane: Lane, time: number): number | null {
+        let minDelta = Infinity;
+
+        for (const activeNote of this.active.values()) {
+            if (!activeNote.isHit && !activeNote.isMissed && activeNote.lane === lane) {
+                const delta = time - activeNote.time;
+                if (Math.abs(delta) < Math.abs(minDelta)) {
+                    minDelta = delta;
+                }
+            }
+        }
+
+        return minDelta === Infinity ? null : minDelta * 1000;
     }
 
     public getActiveNotes(): ActiveNote[] {

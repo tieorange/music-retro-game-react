@@ -5,6 +5,8 @@ import { NoteTracker } from './NoteTracker';
 import { ScoringEngine } from '@/features/gameplay/scoring/ScoringEngine';
 import { ComboTracker } from '@/features/gameplay/scoring/ComboTracker';
 import { GameStore } from '@/shared/stores/gameStore';
+import { GameEventBus } from './GameEventBus';
+import { COMBO_THRESHOLDS, NEAR_MISS_WINDOW } from '@/domain/constants';
 
 export class GameEngine {
     private playback: AudioPlaybackService;
@@ -14,7 +16,12 @@ export class GameEngine {
     private combo: ComboTracker;
     private getStore: () => GameStore;
     private beatMap: BeatMap;
-    private isRunning: boolean = false;
+    private _isRunning: boolean = false;
+    public events: GameEventBus;
+
+    public get isRunning(): boolean {
+        return this._isRunning;
+    }
 
     constructor(beatMap: BeatMap, playback: AudioPlaybackService, getStore: () => GameStore) {
         this.playback = playback;
@@ -25,6 +32,7 @@ export class GameEngine {
         this.tracker = new NoteTracker(beatMap.notes, this.handleAutoMiss.bind(this));
         this.scoring = new ScoringEngine();
         this.combo = new ComboTracker();
+        this.events = new GameEventBus();
     }
 
     public async start(): Promise<void> {
@@ -36,11 +44,11 @@ export class GameEngine {
         });
 
         await this.playback.start();
-        this.isRunning = true;
+        this._isRunning = true;
     }
 
     public update(currentTime: number): void {
-        if (!this.isRunning) return;
+        if (!this._isRunning) return;
 
         this.tracker.update(currentTime);
         this.getStore().setCurrentTime(currentTime);
@@ -53,12 +61,24 @@ export class GameEngine {
     }
 
     public handleInput(lane: Lane, time: number): void {
-        if (!this.isRunning) return;
+        if (!this._isRunning) return;
 
         const result = this.tracker.judgeHit(lane, time);
         if (result) {
             this.combo.hit(result.judgment);
             result.comboAtHit = this.combo.combo;
+
+            this.events.emit('hit', {
+                judgment: result.judgment,
+                lane,
+                combo: this.combo.combo,
+                multiplier: this.combo.multiplier
+            });
+
+            const isMilestone = COMBO_THRESHOLDS.some(t => t.combo === this.combo.combo) || (this.combo.combo >= 50 && this.combo.combo % 50 === 0);
+            if (isMilestone && this.combo.combo >= 10) {
+                this.events.emit('combo-milestone', { combo: this.combo.combo });
+            }
 
             const addedScore = this.scoring.calculateScore(result.judgment, this.combo.multiplier);
             const state = this.getStore();
@@ -70,12 +90,26 @@ export class GameEngine {
             );
 
             state.addHitResult(result);
+        } else {
+            const nearestDelta = this.tracker.getNearestNoteDelta(lane, time);
+            if (nearestDelta !== null && Math.abs(nearestDelta) <= NEAR_MISS_WINDOW) {
+                this.events.emit('near-miss', { lane });
+            } else {
+                this.events.emit('ghost-press', { lane });
+            }
         }
     }
 
-    private handleAutoMiss(noteId: string): void {
+    private handleAutoMiss(noteId: string, lane: Lane): void {
         const state = this.getStore();
+        const previousCombo = this.combo.combo;
         this.combo.hit('miss');
+
+        if (previousCombo > 0) {
+            this.events.emit('combo-break', { previousCombo });
+        }
+        this.events.emit('miss', { lane });
+
         state.updateScoreAndCombo(state.score, 0, 1);
         state.addHitResult({
             noteId,
@@ -86,17 +120,17 @@ export class GameEngine {
     }
 
     public pause(): void {
-        this.isRunning = false;
+        this._isRunning = false;
         this.playback.pause();
     }
 
     public resume(): void {
-        this.isRunning = true;
+        this._isRunning = true;
         this.playback.resume();
     }
 
     public endGame(): void {
-        this.isRunning = false;
+        this._isRunning = false;
         this.playback.stop();
         this.scheduler.clear();
 
@@ -118,7 +152,7 @@ export class GameEngine {
     }
 
     public destroy(): void {
-        this.isRunning = false;
+        this._isRunning = false;
         this.scheduler.clear();
         this.playback.destroy();
     }

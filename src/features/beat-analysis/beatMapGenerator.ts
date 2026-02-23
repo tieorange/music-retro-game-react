@@ -8,22 +8,25 @@ interface DifficultyConfig {
     offbeatChance: number;
     allowTriplets: boolean;
     laneJumpChance: number;
+    strengthPercentile: number; // beats above this percentile are always included
 }
 
 const DIFFICULTY_CONFIG: Record<GameDifficulty, DifficultyConfig> = {
     easy: {
         baseStride: 2,
-        minGap: 0.35,
+        minGap: 0.4,
         offbeatChance: 0,
         allowTriplets: false,
         laneJumpChance: 0.2,
+        strengthPercentile: 75,
     },
     normal: {
-        baseStride: 1,
-        minGap: 0.22,
-        offbeatChance: 0.12,
+        baseStride: 2,
+        minGap: 0.28,
+        offbeatChance: 0,
         allowTriplets: false,
-        laneJumpChance: 0.35,
+        laneJumpChance: 0.3,
+        strengthPercentile: 55,
     },
     hard: {
         baseStride: 1,
@@ -31,6 +34,7 @@ const DIFFICULTY_CONFIG: Record<GameDifficulty, DifficultyConfig> = {
         offbeatChance: 0.45,
         allowTriplets: false,
         laneJumpChance: 0.55,
+        strengthPercentile: 25,
     },
     expert: {
         baseStride: 1,
@@ -38,6 +42,7 @@ const DIFFICULTY_CONFIG: Record<GameDifficulty, DifficultyConfig> = {
         offbeatChance: 0.75,
         allowTriplets: true,
         laneJumpChance: 0.75,
+        strengthPercentile: 0,
     },
 };
 
@@ -45,16 +50,34 @@ function seededValue(index: number, time: number) {
     return Math.abs(Math.sin(index * 12.9898 + time * 78.233));
 }
 
-function generateNoteTimes(beats: number[], difficulty: GameDifficulty): number[] {
+function computePercentile(values: number[], percentile: number): number {
+    if (values.length === 0) return 0;
+    const sorted = [...values].sort((a, b) => a - b);
+    const index = Math.floor((percentile / 100) * sorted.length);
+    return sorted[Math.min(index, sorted.length - 1)];
+}
+
+function generateNoteTimes(beats: number[], difficulty: GameDifficulty, beatStrengths?: number[]): number[] {
     const cfg = DIFFICULTY_CONFIG[difficulty];
     if (beats.length === 0) return [];
 
+    const hasStrengths = beatStrengths !== undefined && beatStrengths.length === beats.length;
+    const strengthThreshold = hasStrengths
+        ? computePercentile(beatStrengths, cfg.strengthPercentile)
+        : 0;
+
     const candidates: number[] = [];
 
-    for (let i = 0; i < beats.length; i += cfg.baseStride) {
+    for (let i = 0; i < beats.length; i++) {
         const beatTime = beats[i];
         const beatInBar = i % 4;
         const barIndex = Math.floor(i / 4);
+
+        // When strength data is available use it exclusively; stride is a fallback for grid-based beats only.
+        const isStrongBeat = hasStrengths && beatStrengths![i] >= strengthThreshold;
+        const isStridePosition = i % cfg.baseStride === 0;
+        if (hasStrengths ? !isStrongBeat : !isStridePosition) continue;
+
         candidates.push(beatTime);
 
         const nextBeat = beats[i + 1];
@@ -109,7 +132,7 @@ export function generateBeatMap(
     difficulty: GameDifficulty
 ): BeatMap {
     const notes: Note[] = [];
-    const noteTimes = generateNoteTimes(analysis.beats, difficulty);
+    const noteTimes = generateNoteTimes(analysis.beats, difficulty, analysis.beatStrengths);
     let previousLane = -1;
     let sameLaneCount = 0;
     const cfg = DIFFICULTY_CONFIG[difficulty];

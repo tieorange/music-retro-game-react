@@ -28,3 +28,15 @@ export const GRADE_THRESHOLDS = {
 export const LANE_COUNT = 4;
 export const NOTE_FALL_DURATION = 2.0;  // seconds
 export const LANE_KEYS = ['d', 'f', 'j', 'k'] as const;
+
+export const NEAR_MISS_WINDOW = 150; // ms
+
+export const LANE_COLORS = [0x00ffff, 0xff00ff, 0xffff00, 0x00ff00];
+
+export const JUDGMENT_COLORS = {
+    perfect: 0xffd700, // gold
+    great: 0x00ffff,   // cyan
+    good: 0x00ff00,    // green
+    miss: 0xff3333,    // red
+    close: 0xff9900,   // orange
+} as const;

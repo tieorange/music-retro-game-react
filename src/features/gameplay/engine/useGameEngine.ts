@@ -11,7 +11,7 @@ export function useGameEngine() {
     useEffect(() => {
         let mounted = true;
 
-        if (store.phase === 'playing' && !engineRef.current && store.song && store.beatMap) {
+        if ((store.phase === 'playing' || store.phase === 'countdown') && !engineRef.current && store.song && store.beatMap) {
             const playback = new AudioPlaybackService();
 
             const initialize = async () => {
@@ -26,8 +26,6 @@ export function useGameEngine() {
                     const localEngine = new GameEngine(store.beatMap!, playback, useGameStore.getState);
                     engineRef.current = localEngine;
                     setEngine(localEngine);
-
-                    await localEngine.start();
                 } catch (error) {
                     console.error('Failed to initialize game engine:', error);
                     playback.destroy();
@@ -50,6 +48,12 @@ export function useGameEngine() {
             }
         };
     }, [store.phase, store.song, store.beatMap]);
+
+    useEffect(() => {
+        if (store.phase === 'playing' && engine && !engine.isRunning) {
+            engine.start().catch(console.error);
+        }
+    }, [store.phase, engine]);
 
     return engine;
 }
