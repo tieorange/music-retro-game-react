@@ -3,10 +3,16 @@ import * as Tone from 'tone';
 export class AudioPlaybackService {
     private player: Tone.Player | null = null;
     private analyser: Tone.Analyser | null = null;
+    private isDestroyed = false;
 
     public async load(audioBuffer: AudioBuffer): Promise<void> {
         // Create Tone.js AudioBuffer from standard AudioBuffer
         const toneBuffer = new Tone.ToneAudioBuffer(audioBuffer);
+
+        if (this.isDestroyed) {
+            toneBuffer.dispose();
+            return;
+        }
 
         this.player = new Tone.Player(toneBuffer).toDestination();
         this.player.sync().start(0);
@@ -48,6 +54,7 @@ export class AudioPlaybackService {
     }
 
     public destroy(): void {
+        this.isDestroyed = true;
         this.stop();
         if (this.player) {
             this.player.dispose();

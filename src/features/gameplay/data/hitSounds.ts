@@ -16,7 +16,13 @@ export class HitSoundService {
     public async init() {
         if (this.isInitialized) return;
 
-        await Tone.start();
+        try {
+            if (Tone.context.state !== 'running') {
+                await Tone.start();
+            }
+        } catch (error) {
+            console.warn("Could not start Tone.js audio context automatically.", error);
+        }
 
         // Master volume for hit sounds (mixed lower than music)
         this.volumeNode = new Tone.Volume(-8).toDestination();

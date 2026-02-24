@@ -21,7 +21,7 @@ export function usePixiApp() {
 
         createPixiApp(canvas).then((pixiApp) => {
             if (isDestroyed) {
-                pixiApp.destroy(true, { children: true, texture: true });
+                pixiApp.destroy(true, { children: true, texture: false });
                 return;
             }
             localApp = pixiApp;
@@ -31,7 +31,7 @@ export function usePixiApp() {
         return () => {
             isDestroyed = true;
             if (localApp) {
-                localApp.destroy(true, { children: true, texture: true });
+                localApp.destroy(true, { children: true, texture: false });
             } else if (canvas.parentElement) {
                 canvas.remove();
             }

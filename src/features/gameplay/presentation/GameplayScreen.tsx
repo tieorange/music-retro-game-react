@@ -39,7 +39,7 @@ export function GameplayScreen() {
     }, [phase, setPhase]);
 
     useEffect(() => {
-        if (!app || !engine || (phase !== 'playing' && phase !== 'countdown' && phase !== 'paused')) return;
+        if (!app || !engine) return;
 
         // Create scene early to see visuals during countdown
         const scene = new GameScene(app, engine);
@@ -49,7 +49,7 @@ export function GameplayScreen() {
             app.stage.removeChild(scene);
             scene.destroy(true);
         };
-    }, [app, engine, phase]);
+    }, [app, engine]);
 
     // Color logic
     let colorClass = 'text-white';
