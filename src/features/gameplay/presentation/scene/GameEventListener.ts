@@ -3,7 +3,7 @@ import { IHitSoundPort } from '@/features/gameplay/application/ports/IHitSoundPo
 import { LaneRenderer } from './LaneRenderer';
 import { HitZoneRenderer } from './HitZoneRenderer';
 import { EffectsController } from './EffectsController';
-import { HitEvent, MissEvent, ComboMilestoneEvent } from '@/features/gameplay/domain/types';
+import { HitEvent, MissEvent, ComboMilestoneEvent, ComboBreakEvent } from '@/features/gameplay/domain/types';
 
 export class GameEventListener {
     private events: GameEventBus;
@@ -48,8 +48,11 @@ export class GameEventListener {
         this.hitSounds.playMilestone(e.combo);
     };
 
-    private onComboBreak = () => {
+    private onComboBreak = (e: ComboBreakEvent) => {
         this.hitSounds.playComboBreak();
+        if (e.previousCombo > 20) {
+            this.effects.triggerHeavyMiss();
+        }
     };
 
     public destroy() {

@@ -9,6 +9,7 @@ export const COMBO_THRESHOLDS = [
     { combo: 10, multiplier: 2 },
     { combo: 30, multiplier: 4 },
     { combo: 50, multiplier: 8 },
+    { combo: 100, multiplier: 16 }, // FEVER
 ] as const;
 
 export const SCORE_VALUES = {

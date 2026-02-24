@@ -62,4 +62,10 @@ export class ComboTracker {
         }
         this._multiplier = newMul;
     }
+
+    public reset(): void {
+        this._combo = 0;
+        this._maxCombo = 0;
+        this._multiplier = 1;
+    }
 }

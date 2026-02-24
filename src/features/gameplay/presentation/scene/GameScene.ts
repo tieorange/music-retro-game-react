@@ -95,6 +95,10 @@ export class GameScene extends Container {
         const dtSeconds = this.app.ticker.deltaMS / 1000;
         const dtFrame = dtSeconds * 60;
 
+        const isFever = this.engine.currentMultiplier >= 16;
+        this.effectsController.setFever(isFever);
+        this.bg.setFever(isFever);
+
         this.effectsController.update(dtSeconds);
         this.bg.update(dtSeconds);
         this.lanes.update(dtFrame);

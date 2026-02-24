@@ -29,7 +29,7 @@ export class HitSoundService implements IHitSoundPort {
         }
 
         this.compressor = new Tone.Compressor({
-            threshold: -12,   // start compressing at -12 dBFS
+            threshold: -20,   // start compressing at -20 dBFS
             ratio: 4,         // 4:1 compression ratio
             attack: 0.003,    // fast attack to catch transients
             release: 0.1,     // 100ms release
@@ -79,18 +79,26 @@ export class HitSoundService implements IHitSoundPort {
         this.isInitialized = true;
     }
 
-    public playHit(judgment: HitJudgment) {
+    public playHit(judgment: HitJudgment, combo: number = 0) {
         if (!this.isInitialized) return;
 
         const time = Tone.now();
+
+        // Pitch shift based on combo
+        const ratio = Math.min(1.5, 1 + combo * 0.002);
+        const detuneCents = 1200 * Math.log2(ratio);
+
         switch (judgment) {
             case 'perfect':
+                this.perfectSynth.detune.setValueAtTime(detuneCents, time);
                 this.perfectSynth.triggerAttackRelease('C6', '16n', time);
                 break;
             case 'great':
+                this.greatSynth.detune.setValueAtTime(detuneCents, time);
                 this.greatSynth.triggerAttackRelease('G5', '32n', time);
                 break;
             case 'good':
+                this.goodSynth.detune.setValueAtTime(detuneCents, time);
                 this.goodSynth.triggerAttackRelease('E5', '32n', time, 0.5);
                 break;
             case 'miss':

@@ -5,12 +5,20 @@ import { GameplayScreen } from '@/features/gameplay/presentation/GameplayScreen'
 import { ResultsScreen } from '@/features/scoring/presentation/ResultsScreen'
 import { Layout } from '@/core/ui/Layout'
 import { Button } from '@/core/ui/button'
+import * as Tone from 'tone'
 
 export function AppRouter() {
     const phase = useGameStore((state) => state.phase)
     const mode = useGameStore((state) => state.mode)
     const difficulty = useGameStore((state) => state.difficulty)
     const setPhase = useGameStore((state) => state.setPhase)
+
+    const handlePlayNow = async () => {
+        if (Tone.context.state !== 'running') {
+            await Tone.start()
+        }
+        setPhase('countdown')
+    }
 
     switch (phase) {
         case 'idle':
@@ -22,11 +30,11 @@ export function AppRouter() {
                 <Layout>
                     <div className="flex flex-col items-center space-y-6">
                         <h2 className="text-4xl text-neon-green">READY</h2>
-                        <p className="text-slate-300">
-                            {mode === 'trackpad' ? 'Trackpad Only: tap/click or press any lane key.' : 'Classic: use D / F / J / K.'}
+                        <p className="text-slate-300 text-center px-4">
+                            {mode === 'trackpad' ? 'Trackpad Only: tap/click anywhere.' : 'Classic: tap lanes or use D / F / J / K.'}
                         </p>
                         <p className="text-slate-400 uppercase tracking-wider">Difficulty: {difficulty}</p>
-                        <Button size="lg" onClick={() => setPhase('countdown')} className="bg-neon-cyan hover:bg-neon-cyan/80 text-black">
+                        <Button size="lg" onClick={handlePlayNow} className="bg-neon-cyan hover:bg-neon-cyan/80 text-black">
                             PLAY NOW
                         </Button>
                     </div>

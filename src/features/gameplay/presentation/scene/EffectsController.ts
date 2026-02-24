@@ -14,23 +14,32 @@ export class EffectsController {
     private shakeTime: number = 0;
     private shakeIntensity: number = 0;
     private baseShakeY: number = 0;
+    private isMobile: boolean;
+    private baseBloom: number = 1.0;
 
     constructor(target: Container) {
         this.target = target;
         this.baseShakeY = target.y;
 
-        const { bloom, crt, glitch } = applyGameEffects(target);
+        const { bloom, crt, glitch, isMobile } = applyGameEffects(target);
         this.bloomFilter = bloom;
         this.crtFilter = crt;
         this.glitchFilter = glitch;
+        this.isMobile = isMobile;
+    }
+
+    public setFever(isFever: boolean) {
+        this.baseBloom = isFever ? 2.0 : 1.0;
     }
 
     public update(dtSeconds: number) {
         // CRT
-        this.crtFilter.time += dtSeconds * 6; // app.ticker.deltaTime * 0.1 at 60fps is roughly dtSeconds * 6
+        if (!this.isMobile) {
+            this.crtFilter.time += dtSeconds * 6; // app.ticker.deltaTime * 0.1 at 60fps is roughly dtSeconds * 6
+        }
 
         // Glitch
-        if (this.glitchFilter.enabled) {
+        if (!this.isMobile && this.glitchFilter.enabled) {
             this.glitchTimer += dtSeconds;
             if (this.glitchTimer >= GLITCH_DURATION) {
                 this.glitchFilter.enabled = false;
@@ -42,10 +51,10 @@ export class EffectsController {
 
         // Bloom
         if (this.bloomSpike > 0) {
-            this.bloomFilter.brightness = 1.0 + this.bloomSpike * 2;
+            this.bloomFilter.brightness = this.baseBloom + this.bloomSpike * 2;
             this.bloomSpike = Math.max(0, this.bloomSpike - 5 * dtSeconds); // fast decay
         } else {
-            this.bloomFilter.brightness = 1.0;
+            this.bloomFilter.brightness = this.baseBloom;
         }
 
         // Shake
@@ -65,10 +74,22 @@ export class EffectsController {
     }
 
     public triggerMiss() {
-        this.glitchFilter.enabled = true;
-        this.glitchTimer = 0;
-        this.crtFilter.time += 5; // jump time for static noise
+        if (!this.isMobile) {
+            this.glitchFilter.enabled = true;
+            this.glitchTimer = 0;
+            this.crtFilter.time += 5; // jump time for static noise
+        }
         this.shakeTime = SHAKE_DURATION;
         this.shakeIntensity = SHAKE_INTENSITY;
+    }
+
+    public triggerHeavyMiss() {
+        if (!this.isMobile) {
+            this.glitchFilter.enabled = true;
+            this.glitchTimer = -0.3; // Longer glitch
+            this.crtFilter.time += 15;
+        }
+        this.shakeTime = SHAKE_DURATION * 1.5;
+        this.shakeIntensity = SHAKE_INTENSITY * 2.5;
     }
 }

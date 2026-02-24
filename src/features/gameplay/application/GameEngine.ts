@@ -24,6 +24,7 @@ export class GameEngine {
     private hitResults: HitResult[] = [];
     public beatMap: BeatMap;
     private _isRunning: boolean = false;
+    private _hasStarted: boolean = false;
     public events: GameEventBus;
 
     public get isRunning(): boolean {
@@ -60,19 +61,30 @@ export class GameEngine {
     }
 
     public async start(): Promise<void> {
+        if (this._hasStarted) {
+            this.resume();
+            return;
+        }
+
         this.scheduler.scheduleAll(this.beatMap.notes, (note) => {
             this.tracker.spawnNote(note);
         });
 
         await this.playback.start();
         this._isRunning = true;
+        this._hasStarted = true;
     }
 
     public update(currentTime: number): void {
         if (!this._isRunning) return;
 
-        this.tracker.update(currentTime);
+        const { holdTicks } = this.tracker.update(currentTime);
         this.state.setCurrentTime(currentTime);
+
+        if (holdTicks > 0) {
+            this._score += holdTicks * 10 * this.combo.multiplier;
+            this.state.updateScoreAndCombo(this._score, this.combo.combo, this.combo.multiplier);
+        }
 
         const song = this.state.song;
         if (song && currentTime >= song.duration + END_GAME_BUFFER) {
@@ -99,6 +111,8 @@ export class GameEngine {
                 this.events.emit('combo-milestone', { combo: comboResult.combo });
             }
 
+            this.hitSounds.playHit(result.judgment, comboResult.combo);
+
             const addedScore = this.scoring.calculateScore(result.judgment, this.combo.multiplier);
             this._score += addedScore;
 
@@ -117,6 +131,15 @@ export class GameEngine {
             } else {
                 this.events.emit('ghost-press', { lane });
             }
+        }
+    }
+
+    public handleInputUp(lane: Lane, time: number): void {
+        if (!this._isRunning) return;
+
+        const result = this.tracker.judgeRelease(lane, time);
+        if (result === 'miss') {
+            this.handleAutoMiss("hold-release", lane);
         }
     }
 
@@ -143,11 +166,30 @@ export class GameEngine {
     public pause(): void {
         this._isRunning = false;
         this.playback.pause();
+        this.state.setPhase('paused');
     }
 
     public resume(): void {
+        // UI handles countdown, we just prep
+        this.state.setPhase('playing');
         this._isRunning = true;
         this.playback.resume();
+    }
+
+    public retry(): void {
+        this._isRunning = false;
+        this._hasStarted = false;
+        this.playback.stop();
+        this.scheduler.clear();
+        this.tracker.reset();
+        this.combo.reset();
+        this._score = 0;
+        this.hitResults = [];
+        this.state.updateScoreAndCombo(0, 0, 1);
+
+        // Seek to 0 so when playback starts again, it starts from beginning
+        this.playback.seek(0);
+        this.state.setPhase('countdown');
     }
 
     public endGame(): void {

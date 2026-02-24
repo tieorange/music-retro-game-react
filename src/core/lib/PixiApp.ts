@@ -3,13 +3,17 @@ import { Application } from 'pixi.js';
 export async function createPixiApp(canvas: HTMLCanvasElement): Promise<Application> {
     const app = new Application();
 
+    const isMobile = typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0;
+    const devicePixelRatio = window.devicePixelRatio || 1;
+    const resolution = isMobile ? Math.min(devicePixelRatio, 2) : devicePixelRatio;
+
     await app.init({
         canvas,
         width: 800,
         height: 600,
         antialias: false,
         backgroundColor: 0x0a0a1a,
-        resolution: window.devicePixelRatio || 1,
+        resolution,
         autoDensity: true,
     });
 

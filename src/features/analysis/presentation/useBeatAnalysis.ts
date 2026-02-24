@@ -22,6 +22,11 @@ export function useBeatAnalysis() {
 
         const analysisService = new BeatAnalysisService();
 
+        if (!song.audioBuffer) {
+            setError("Audio buffer is missing.");
+            return;
+        }
+
         analysisService.analyze(song.audioBuffer, (stage, percent) => {
             setProgressStage(stage);
             setProgressPercent(percent);

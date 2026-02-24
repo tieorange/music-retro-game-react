@@ -5,6 +5,8 @@ export interface ActiveNote extends Note {
     isHit: boolean;
     isMissed: boolean;
     spawnTime: number;
+    isHeld?: boolean;
+    lastTickTime?: number;
 }
 
 export class NoteTracker {
@@ -29,19 +31,33 @@ export class NoteTracker {
         });
     }
 
-    public update(currentTime: number): void {
-        // Check for missed notes
+    public update(currentTime: number): { holdTicks: number } {
+        let holdTicks = 0;
+
         for (const [id, activeNote] of this.active.entries()) {
-            if (!activeNote.isHit && !activeNote.isMissed) {
+            if (activeNote.isHeld) {
+                if (!activeNote.lastTickTime) activeNote.lastTickTime = activeNote.time;
+
+                const endTime = activeNote.time + (activeNote.duration || 0);
+                if (currentTime >= endTime) {
+                    activeNote.isHit = true;
+                    this.active.delete(id);
+                } else {
+                    while (currentTime - activeNote.lastTickTime >= 0.1) {
+                        holdTicks++;
+                        activeNote.lastTickTime += 0.1;
+                    }
+                }
+            } else if (!activeNote.isHit && !activeNote.isMissed) {
+                // Normal Miss Check
                 if (currentTime > activeNote.time + this.maxMissTime) {
                     activeNote.isMissed = true;
                     if (this.onMissCallback) this.onMissCallback(activeNote.id, activeNote.lane);
-                    // We can remove it from active after some time, or let it fall off screen
-                    // For now, let the renderer remove it when it's way past
                     this.active.delete(id);
                 }
             }
         }
+        return { holdTicks };
     }
 
     public judgeHit(lane: Lane, time: number): HitResult | null {
@@ -65,14 +81,19 @@ export class NoteTracker {
 
         // Check if within largest window
         if (absDeltaMs <= TIMING_WINDOWS.good) {
-            closestNote.isHit = true;
             let judgment: HitJudgment = 'miss';
 
             if (absDeltaMs <= TIMING_WINDOWS.perfect) judgment = 'perfect';
             else if (absDeltaMs <= TIMING_WINDOWS.great) judgment = 'great';
             else judgment = 'good';
 
-            this.active.delete(closestNote.id);
+            if (closestNote.type === 'hold') {
+                closestNote.isHeld = true;
+                closestNote.lastTickTime = time;
+            } else {
+                closestNote.isHit = true;
+                this.active.delete(closestNote.id);
+            }
 
             return {
                 noteId: closestNote.id,
@@ -82,6 +103,25 @@ export class NoteTracker {
             };
         }
 
+        return null;
+    }
+
+    public judgeRelease(lane: Lane, time: number): 'miss' | 'complete' | null {
+        for (const [id, note] of this.active.entries()) {
+            if (note.lane === lane && note.isHeld) {
+                const releaseTarget = note.time + (note.duration || 0);
+                // early release by more than 200ms
+                if (releaseTarget - time > 0.2) {
+                    note.isMissed = true;
+                    this.active.delete(id);
+                    return 'miss';
+                } else {
+                    note.isHit = true;
+                    this.active.delete(id);
+                    return 'complete';
+                }
+            }
+        }
         return null;
     }
 
@@ -102,5 +142,9 @@ export class NoteTracker {
 
     public getActiveNotes(): ActiveNote[] {
         return Array.from(this.active.values());
+    }
+
+    public reset(): void {
+        this.active.clear();
     }
 }

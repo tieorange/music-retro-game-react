@@ -2,11 +2,13 @@ import { AdvancedBloomFilter, CRTFilter, GlitchFilter } from 'pixi-filters';
 import { Container } from 'pixi.js';
 
 export function applyGameEffects(stage: Container) {
+    const isMobile = typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0;
+
     const bloom = new AdvancedBloomFilter({
         threshold: 0.5,
         bloomScale: 1.5,
         brightness: 1.0,
-        blur: 4,
+        blur: isMobile ? 2 : 4,
     });
 
     const crt = new CRTFilter({
@@ -31,7 +33,11 @@ export function applyGameEffects(stage: Container) {
     glitch.enabled = false; // Add dynamically on misses
 
     // Note: in v8, filters array assignment is strict, might need to cast or apply directly
-    stage.filters = [bloom, crt, glitch] as any;
+    if (isMobile) {
+        stage.filters = [bloom] as any;
+    } else {
+        stage.filters = [bloom, crt, glitch] as any;
+    }
 
-    return { bloom, crt, glitch };
+    return { bloom, crt, glitch, isMobile };
 }

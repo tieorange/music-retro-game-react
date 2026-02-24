@@ -33,16 +33,27 @@ class VisualNote extends Container {
         this.scale.set(0); // Pop-in start
     }
 
-    public updateTrail(color: number, length: number) {
+    public updateTrail(color: number, length: number, isHold: boolean = false) {
         this.trail.clear();
-        // Draw a gradient-like trail. Pixi v8 handles gradients differently, 
-        // so we can just draw a polygon with varying alpha or multiple rects.
-        // For simplicity, a simple polygon extending up:
-        this.trail.moveTo(-10, 0);
-        this.trail.lineTo(10, 0);
-        this.trail.lineTo(2, -length);
-        this.trail.lineTo(-2, -length);
-        this.trail.fill({ color, alpha: 0.3 });
+        if (length <= 0) return;
+
+        if (isHold) {
+            this.trail.moveTo(-15, 0);
+            this.trail.lineTo(15, 0);
+            this.trail.lineTo(15, -length);
+            this.trail.lineTo(-15, -length);
+            this.trail.fill({ color, alpha: 0.6 });
+
+            // Cap at the end of the note duration
+            this.trail.rect(-20, -length - 5, 40, 10);
+            this.trail.fill({ color: 0xffffff, alpha: 0.8 });
+        } else {
+            this.trail.moveTo(-10, 0);
+            this.trail.lineTo(10, 0);
+            this.trail.lineTo(2, -length);
+            this.trail.lineTo(-2, -length);
+            this.trail.fill({ color, alpha: 0.3 });
+        }
     }
 }
 
@@ -104,7 +115,10 @@ export class NoteRenderer extends Container {
             // But NoteTracker sets spawnTime = time - NOTE_FALL_DURATION. 
             // So progress is 0 at spawn time, 1 at hit time.
 
-            const currentY = this.spawnY + (this.hitZoneY - this.spawnY) * Math.max(0, Math.min(1, progress));
+            let currentY = this.spawnY + (this.hitZoneY - this.spawnY) * Math.max(0, Math.min(1, progress));
+            if (note.type === 'hold' && note.isHeld) {
+                currentY = this.hitZoneY;
+            }
             vNote.y = currentY;
 
             // Approach fade
@@ -142,8 +156,20 @@ export class NoteRenderer extends Container {
             }
 
             // Update trail length
-            const trailLength = 60 * progress;
-            vNote.updateTrail(color, trailLength);
+            let trailLength = 0;
+            if (note.type === 'hold' && note.duration) {
+                const durationPixels = (note.duration / NOTE_FALL_DURATION) * (this.hitZoneY - this.spawnY);
+                if (note.isHeld) {
+                    const heldTime = currentTime - note.time;
+                    const remainingDuration = Math.max(0, note.duration - heldTime);
+                    trailLength = (remainingDuration / NOTE_FALL_DURATION) * (this.hitZoneY - this.spawnY);
+                } else {
+                    trailLength = durationPixels;
+                }
+            } else {
+                trailLength = 60 * progress;
+            }
+            vNote.updateTrail(color, trailLength, note.type === 'hold');
         }
 
         for (const [id, vNote] of Array.from(this.activeSprites.entries())) {

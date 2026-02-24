@@ -1,12 +1,9 @@
-import { guess } from 'web-audio-beat-detector';
 import { BeatAnalysis } from '@/features/analysis/domain/types';
 import { OnsetAnalysisStrategy } from '@/features/analysis/domain/OnsetAnalysisStrategy';
 import { ConfidenceCalculator } from '@/features/analysis/domain/ConfidenceCalculator';
 import {
     buildOnsetEnvelope,
-    estimateTempoFromEnvelope,
     trackBeats,
-    refineBeatPhases,
     inferDownbeatPhase,
     buildGridBeats,
     computeBeatAlignmentConfidence
@@ -17,48 +14,74 @@ export class BeatAnalysisService {
         onProgress('Initializing analysis...', 10);
 
         try {
-            onProgress('Extracting rhythm...', 40);
+            onProgress('Extracting rhythm (Essentia DSP Worker)...', 20);
 
-            // web-audio-beat-detector uses Web Workers internally to avoid blocking the UI
-            const result = await guess(audioBuffer);
+            // Transfer to worker
+            const worker = new Worker(new URL('./beatAnalysis.worker.ts', import.meta.url), { type: 'module' });
 
-            onProgress('Generating beat map...', 80);
+            const channels: Float32Array[] = [];
+            const transferables: ArrayBuffer[] = [];
+            for (let ch = 0; ch < audioBuffer.numberOfChannels; ch++) {
+                const data = audioBuffer.getChannelData(ch).slice(); // Copy to avoid detaching source buffer
+                channels.push(data);
+                transferables.push(data.buffer);
+            }
 
-            const bpm = result.bpm;
-            const offset = result.offset;
+            const { beatTimes, bpm, success, error } = await new Promise<any>((resolve, reject) => {
+                worker.onmessage = (e) => resolve(e.data);
+                worker.onerror = (e) => reject(e);
+                worker.postMessage({
+                    channelData: channels,
+                    sampleRate: audioBuffer.sampleRate,
+                    length: audioBuffer.length
+                }, transferables);
+            });
+
+            worker.terminate();
+
+            if (!success) {
+                throw new Error("Essentia worker failed: " + error);
+            }
+
+            onProgress('Generating beat map...', 60);
+
+            const offset = beatTimes.length > 0 ? beatTimes[0] : 0;
             const duration = audioBuffer.duration;
             const beatInterval = 60 / bpm;
 
-            onProgress('Refining beat timings...', 90);
-
+            onProgress('Aligning downbeats...', 80);
             const envelopeData = buildOnsetEnvelope(audioBuffer);
-            const tempoEstimate = estimateTempoFromEnvelope(envelopeData.envelope, envelopeData.frameRate, bpm);
-            const tracked = trackBeats(envelopeData.envelope, tempoEstimate.bestLag);
-            const refined = refineBeatPhases(tracked.frames, envelopeData.envelope, tempoEstimate.bestLag);
-            const downbeatPhase = inferDownbeatPhase(refined.strengths);
 
-            // Align beat index 0 to inferred downbeat for stronger 4/4 feel.
-            const alignedFrames = refined.frames.slice(downbeatPhase);
-            const alignedStrengths = refined.strengths.slice(downbeatPhase);
-            const onsetBeats = alignedFrames.map((frame) => frame / envelopeData.frameRate);
+            let alignedStrengths: number[] = [];
+            let onsetBeats: number[] = beatTimes;
+            let alignmentConfidence = 0;
+
+            if (envelopeData.envelope.length > 0) {
+                // Ensure essentia tracked beats line up with our basic envelope for confidence scoring
+                const tracked = trackBeats(envelopeData.envelope, Math.round(60 / bpm * envelopeData.frameRate));
+                const downbeatPhase = inferDownbeatPhase(tracked.strengths);
+
+                alignedStrengths = tracked.strengths.slice(downbeatPhase);
+                alignmentConfidence = computeBeatAlignmentConfidence(envelopeData.envelope, tracked.frames);
+            }
 
             const gridBeats = buildGridBeats(offset, duration, beatInterval);
 
             const strategy = new OnsetAnalysisStrategy();
+            // We pass essentia's beats in as the primary.
             const strategyResult = strategy.determineBeats(
                 onsetBeats,
                 alignedStrengths,
                 gridBeats,
-                tempoEstimate.bpm,
+                bpm,
                 bpm
             );
 
             const calculator = new ConfidenceCalculator();
-            const alignmentConfidence = computeBeatAlignmentConfidence(envelopeData.envelope, tracked.frames);
             const confidence = calculator.calculate(
                 strategyResult.hasEnoughOnsets,
-                tempoEstimate.clarity,
-                alignmentConfidence
+                1.0, // essentia clarity is assumed high
+                Math.max(0.5, alignmentConfidence)
             );
 
             onProgress('Finalizing...', 100);

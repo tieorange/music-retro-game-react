@@ -144,15 +144,23 @@ export class HUDRenderer extends Container {
 
             this.multiplierText.x = bx;
             this.multiplierText.y = by;
-            this.multiplierText.text = `${multiplier}X`;
-
-            this.multiplierBanner.clear();
             let bannerColor = 0xffffff;
+            let bannerWidth = 60;
+            let bannerText = `${multiplier}X`;
+
             if (multiplier === 2) bannerColor = 0x00ff00;
             if (multiplier === 4) bannerColor = 0x00ffff;
             if (multiplier === 8) bannerColor = 0xff00ff;
+            if (multiplier >= 16) {
+                bannerColor = 0xffd700;
+                bannerWidth = 100;
+                bannerText = "FEVER!";
+            }
 
-            this.multiplierBanner.rect(bx - 30, by - 15, 60, 30);
+            this.multiplierText.text = bannerText;
+
+            this.multiplierBanner.clear();
+            this.multiplierBanner.rect(bx - bannerWidth / 2, by - 15, bannerWidth, 30);
             this.multiplierBanner.fill({ color: bannerColor });
         } else {
             this.multiplierText.alpha = 0;

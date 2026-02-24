@@ -183,9 +183,31 @@ export function generateBeatMap(
         });
     }
 
+    let finalNotes = notes;
+    if (difficulty !== 'easy' && mode !== 'trackpad') {
+        finalNotes = [];
+        const laneLastNote: Partial<Record<Lane, Note>> = {};
+
+        for (const note of notes) {
+            const last = laneLastNote[note.lane];
+            if (last) {
+                const interval = note.time - last.time;
+                // Merge if interval is good for a hold (0.2s to 0.8s) with a 40% chance
+                if (interval > 0.2 && interval <= 0.8 && seededValue(note.lane, note.time) < 0.4) {
+                    last.type = 'hold';
+                    last.duration = interval - 0.1; // Release slightly before next beat
+                    laneLastNote[note.lane] = undefined; // Prevent merging 3 notes
+                    continue;
+                }
+            }
+            laneLastNote[note.lane] = note;
+            finalNotes.push(note);
+        }
+    }
+
     return {
         songId,
         bpm: analysis.bpm,
-        notes,
+        notes: finalNotes,
     };
 }

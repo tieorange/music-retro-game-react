@@ -6,4 +6,8 @@ export interface IAudioPlaybackPort {
     stop(): void;
     destroy(): void;
     load(buffer: AudioBuffer): Promise<void>;
+    seek(timeSeconds: number): void;
+    readonly duration: number;
+    readonly isPlaying: boolean;
+    readonly currentTime: number;
 }

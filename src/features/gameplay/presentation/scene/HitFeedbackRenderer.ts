@@ -29,6 +29,11 @@ export class HitFeedbackRenderer extends Container {
     private particles: Particle[] = [];
     private texts: FloatingText[] = [];
 
+    // Pools
+    private particlePool: Graphics[] = [];
+    private textPool: Text[] = [];
+    private isMobile: boolean;
+
     // Pre-allocate styles
     private styles: Record<string, TextStyle> = {
         perfect: new TextStyle({ fontFamily: '"Press Start 2P", monospace', fontSize: 24, fill: 0xffd700, stroke: { color: 0xffffff, width: 2 }, dropShadow: { color: 0xffd700, blur: 5, distance: 0 } }),
@@ -45,6 +50,21 @@ export class HitFeedbackRenderer extends Container {
         this.events = events;
         this.laneXPositions = laneXPositions;
         this.hitZoneY = hitZoneY;
+        this.isMobile = typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0;
+
+        // Pre-allocate pools
+        for (let i = 0; i < 200; i++) {
+            const g = new Graphics();
+            g.rect(-3, -3, 6, 6);
+            g.fill({ color: 0xffffff });
+            this.particlePool.push(g);
+        }
+
+        for (let i = 0; i < 30; i++) {
+            const t = new Text({ text: '', style: this.styles.good });
+            t.anchor.set(0.5);
+            this.textPool.push(t);
+        }
 
         this.events.on('hit', this.onHit);
         this.events.on('miss', this.onMiss);
@@ -59,6 +79,13 @@ export class HitFeedbackRenderer extends Container {
         this.events.off('near-miss', this.onNearMiss);
         this.events.off('combo-milestone', this.onMilestone);
         this.events.off('combo-break', this.onBreak);
+
+        // Clear pools
+        this.particlePool.forEach(p => p.destroy());
+        this.particlePool = [];
+        this.textPool.forEach(t => t.destroy());
+        this.textPool = [];
+
         super.destroy(options);
     }
 
@@ -115,18 +142,29 @@ export class HitFeedbackRenderer extends Container {
         this.spawnText(x, this.hitZoneY - 150, `COMBO x${e.combo}!`, this.styles.milestone, -0.2, 2.0, 1.5, 0.05);
     };
 
-    private onBreak = (_e: ComboBreakEvent) => {
+    private onBreak = (e: ComboBreakEvent) => {
         const x = this.parent ? (this.parent as any).width / 2 : 400;
-        this.spawnText(x, this.hitZoneY - 100, `COMBO BROKEN`, this.styles.miss, 0.5, 1.0, 1.5, -0.1);
+        const scale = e.previousCombo > 20 ? 2.5 : 1.5;
+        this.spawnText(x, this.hitZoneY - 100, `COMBO BROKEN`, this.styles.miss, 0.5, 1.0, scale, -0.1);
+        if (e.previousCombo > 20) {
+            this.spawnParticles(x, this.hitZoneY - 100, 30, JUDGMENT_COLORS.miss, 15, 'starburst');
+        }
     };
 
     private spawnParticles(x: number, y: number, count: number, color: number, speed: number, shape: string) {
+        if (this.isMobile) count = Math.ceil(count / 2);
+
         for (let i = 0; i < count; i++) {
-            const g = new Graphics();
-            g.rect(-3, -3, 6, 6);
-            g.fill({ color });
+            let g = this.particlePool.pop();
+            if (!g) {
+                g = new Graphics();
+                g.rect(-3, -3, 6, 6);
+                g.fill({ color: 0xffffff });
+            }
+            g.tint = color;
             g.x = x;
             g.y = y;
+            g.alpha = 1;
             this.addChild(g);
 
             let vx = 0, vy = 0, grav = 0.2;
@@ -163,12 +201,19 @@ export class HitFeedbackRenderer extends Container {
     }
 
     private spawnText(x: number, y: number, str: string, style: TextStyle, vy: number, life: number, initialScale: number, scaleSpeed: number) {
-        const text = new Text({ text: str, style });
-        text.anchor.set(0.5);
+        let text = this.textPool.pop();
+        if (!text) {
+            text = new Text({ text: '', style });
+            text.anchor.set(0.5);
+        }
+
+        text.text = str;
+        text.style = style;
         text.x = x;
         text.y = y;
         text.scale.set(initialScale);
         text.rotation = (Math.random() - 0.5) * 0.1;
+        text.alpha = 1;
         this.addChild(text);
 
         this.texts.push({
@@ -195,7 +240,7 @@ export class HitFeedbackRenderer extends Container {
 
             if (p.life <= 0) {
                 this.removeChild(p.sprite);
-                p.sprite.destroy();
+                this.particlePool.push(p.sprite);
                 this.particles.splice(i, 1);
             }
         }
@@ -216,7 +261,7 @@ export class HitFeedbackRenderer extends Container {
 
             if (t.life <= 0) {
                 this.removeChild(t.sprite);
-                t.sprite.destroy();
+                this.textPool.push(t.sprite);
                 this.texts.splice(i, 1);
             }
         }
