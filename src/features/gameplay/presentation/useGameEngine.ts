@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useGameStore } from '@/state/gameStore';
-import { GameEngine } from './engine/GameEngine';
+import { GameEngine } from '../application/GameEngine';
 import { AudioPlaybackService } from '@/features/audio/data/audioPlayback';
+import { IGameStatePort } from '../application/ports/IGameStatePort';
 
 export function useGameEngine() {
     const phase = useGameStore(s => s.phase);
@@ -17,6 +18,17 @@ export function useGameEngine() {
         if ((phase === 'playing' || phase === 'countdown') && !engineRef.current && song && beatMap) {
             const playback = new AudioPlaybackService();
 
+            const stateAdapter: IGameStatePort = {
+                get song() { return useGameStore.getState().song; },
+                get score() { return useGameStore.getState().score; },
+                get hitResults() { return useGameStore.getState().hitResults; },
+                setCurrentTime: (time) => useGameStore.getState().setCurrentTime(time),
+                setPhase: (phase) => useGameStore.getState().setPhase(phase),
+                updateScoreAndCombo: (score, combo, multiplier) => useGameStore.getState().updateScoreAndCombo(score, combo, multiplier),
+                addHitResult: (result) => useGameStore.getState().addHitResult(result),
+                setFinalScore: (score) => useGameStore.getState().setFinalScore(score)
+            };
+
             const initialize = async () => {
                 try {
                     await playback.load(song!.audioBuffer);
@@ -26,7 +38,7 @@ export function useGameEngine() {
                         return;
                     }
 
-                    const localEngine = new GameEngine(beatMap!, playback, useGameStore.getState);
+                    const localEngine = new GameEngine(beatMap!, playback, stateAdapter);
                     engineRef.current = localEngine;
                     setEngine(localEngine);
                 } catch (error) {

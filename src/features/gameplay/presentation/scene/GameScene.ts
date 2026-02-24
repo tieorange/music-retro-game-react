@@ -1,5 +1,5 @@
 import { Container, Application, Graphics } from 'pixi.js';
-import { GameEngine } from '../engine/GameEngine';
+import { GameEngine } from '../../application/GameEngine';
 import { LaneRenderer } from './LaneRenderer';
 import { NoteRenderer } from './NoteRenderer';
 import { HitZoneRenderer } from './HitZoneRenderer';
@@ -180,13 +180,18 @@ export class GameScene extends Container {
             this.y = this.baseShakeY;
         }
 
+        // deltaTime is relative to 60fps (1 frame = 1.0). If you want real-time consistent 
+        // behavior regardless of refresh rate, we pass a real-time scaled delta.
+        // dtSeconds * 60 will equal 1.0 at exactly 60fps, giving us consistent frame-time math.
+        const dtFrame = dtSeconds * 60;
+
         this.bg.update(dtSeconds);
-        this.lanes.update(this.app.ticker.deltaTime); // Using deltaFrames for simple logic
+        this.lanes.update(dtFrame);
         this.notes.update(time, activeNotes);
-        this.hitFeedback.update(this.app.ticker.deltaTime);
-        this.hud.update(this.app.ticker.deltaTime, state.score, state.combo, state.multiplier, this.app.screen.width);
-        this.hitZone.update(time, this.app.ticker.deltaTime);
-        this.hitZone.decayPads(this.app.ticker.deltaTime);
+        this.hitFeedback.update(dtFrame);
+        this.hud.update(dtFrame, state.score, state.combo, state.multiplier, this.app.screen.width);
+        this.hitZone.update(time, dtFrame);
+        this.hitZone.decayPads(dtFrame);
     };
 
     public destroy(options?: any) {

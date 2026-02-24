@@ -259,6 +259,8 @@ export function inferDownbeatPhase(strengths: number[]): number {
 }
 
 export function buildGridBeats(offset: number, duration: number, beatInterval: number): number[] {
+    if (beatInterval <= 0) return [];
+
     const beats: number[] = [];
     let currentBeatTime = offset;
     while (currentBeatTime < duration) {

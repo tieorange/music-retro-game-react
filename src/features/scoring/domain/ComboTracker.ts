@@ -35,7 +35,8 @@ export class ComboTracker {
 
     private updateMultiplier(): void {
         let newMul = 1;
-        for (const t of COMBO_THRESHOLDS) {
+        const sortedThresholds = [...COMBO_THRESHOLDS].sort((a, b) => a.combo - b.combo);
+        for (const t of sortedThresholds) {
             if (this._combo >= t.combo) {
                 newMul = t.multiplier;
             }

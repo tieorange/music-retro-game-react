@@ -1,21 +1,21 @@
 import { BeatMap } from '@/features/analysis/domain/types';
-import { Lane } from '@/features/gameplay/domain/types';;
-import { AudioPlaybackService } from '@/features/audio/data/audioPlayback';
-import { NoteScheduler } from '../../data/NoteScheduler';
-import { NoteTracker } from '../../domain/NoteTracker';
+import { Lane } from '@/features/gameplay/domain/types';
+import { IAudioPlaybackPort } from './ports/IAudioPlaybackPort';
+import { IGameStatePort } from './ports/IGameStatePort';
+import { NoteScheduler } from '../data/NoteScheduler';
+import { NoteTracker } from '../domain/NoteTracker';
 import { ScoringEngine } from '@/features/scoring/domain/ScoringEngine';
 import { ComboTracker } from '@/features/scoring/domain/ComboTracker';
-import { GameStore } from '@/state/gameStore';
-import { GameEventBus } from '../../domain/GameEventBus';
+import { GameEventBus } from '../domain/GameEventBus';
 import { COMBO_THRESHOLDS, NEAR_MISS_WINDOW } from '@/features/gameplay/domain/constants';
 
 export class GameEngine {
-    private playback: AudioPlaybackService;
+    private playback: IAudioPlaybackPort;
+    private state: IGameStatePort;
     private scheduler: NoteScheduler;
     private tracker: NoteTracker;
     private scoring: ScoringEngine;
     private combo: ComboTracker;
-    private getStore: () => GameStore;
     private beatMap: BeatMap;
     private _isRunning: boolean = false;
     public events: GameEventBus;
@@ -24,9 +24,9 @@ export class GameEngine {
         return this._isRunning;
     }
 
-    constructor(beatMap: BeatMap, playback: AudioPlaybackService, getStore: () => GameStore) {
+    constructor(beatMap: BeatMap, playback: IAudioPlaybackPort, state: IGameStatePort) {
         this.playback = playback;
-        this.getStore = getStore;
+        this.state = state;
         this.beatMap = beatMap;
 
         this.scheduler = new NoteScheduler();
@@ -39,9 +39,6 @@ export class GameEngine {
     public async start(): Promise<void> {
         this.scheduler.scheduleAll(this.beatMap.notes, (note) => {
             this.tracker.spawnNote(note);
-            // We don't need to explicitly push to Zustand activeNotes if we pull from tracker, 
-            // but for React/Pixi bridge it's better to update active notes if needed, or simply read from GameEngine.
-            // We'll let the Ticker pull from gameEngine.getActiveNotes().
         });
 
         await this.playback.start();
@@ -52,11 +49,10 @@ export class GameEngine {
         if (!this._isRunning) return;
 
         this.tracker.update(currentTime);
-        this.getStore().setCurrentTime(currentTime);
+        this.state.setCurrentTime(currentTime);
 
-        // Check for song end
-        const state = this.getStore();
-        if (state.song && currentTime >= state.song.duration + 2.0) {
+        const song = this.state.song;
+        if (song && currentTime >= song.duration + 2.0) {
             this.endGame();
         }
     }
@@ -82,15 +78,14 @@ export class GameEngine {
             }
 
             const addedScore = this.scoring.calculateScore(result.judgment, this.combo.multiplier);
-            const state = this.getStore();
 
-            state.updateScoreAndCombo(
-                state.score + addedScore,
+            this.state.updateScoreAndCombo(
+                this.state.score + addedScore,
                 this.combo.combo,
                 this.combo.multiplier
             );
 
-            state.addHitResult(result);
+            this.state.addHitResult(result);
         } else {
             const nearestDelta = this.tracker.getNearestNoteDelta(lane, time);
             if (nearestDelta !== null && Math.abs(nearestDelta) <= NEAR_MISS_WINDOW) {
@@ -102,7 +97,6 @@ export class GameEngine {
     }
 
     private handleAutoMiss(noteId: string, lane: Lane): void {
-        const state = this.getStore();
         const previousCombo = this.combo.combo;
         this.combo.hit('miss');
 
@@ -111,8 +105,8 @@ export class GameEngine {
         }
         this.events.emit('miss', { lane });
 
-        state.updateScoreAndCombo(state.score, 0, 1);
-        state.addHitResult({
+        this.state.updateScoreAndCombo(this.state.score, 0, 1);
+        this.state.addHitResult({
             noteId,
             judgment: 'miss',
             delta: 0,
@@ -135,21 +129,20 @@ export class GameEngine {
         this.playback.stop();
         this.scheduler.clear();
 
-        // Calculate final score
-        const state = this.getStore();
-        if (!state.song) return;
+        const song = this.state.song;
+        if (!song) return;
 
         const finalScore = this.scoring.calculateFinalScore(
-            state.song.id,
-            state.song.name,
+            song.id,
+            song.name,
             this.beatMap.notes.length,
-            state.hitResults,
+            this.state.hitResults,
             this.combo.maxCombo,
-            state.score
+            this.state.score
         );
 
-        state.setFinalScore(finalScore);
-        state.setPhase('results');
+        this.state.setFinalScore(finalScore);
+        this.state.setPhase('results');
     }
 
     public destroy(): void {

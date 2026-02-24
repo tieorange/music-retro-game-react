@@ -1,6 +1,6 @@
 import { useEffect, useCallback } from 'react';
+import { GameEngine } from '../application/GameEngine';
 import { useGameStore } from '@/state/gameStore';
-import { GameEngine } from './engine/GameEngine';
 import * as Tone from 'tone';
 
 const KEY_BINDINGS: Record<string, 0 | 1 | 2 | 3> = {
