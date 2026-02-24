@@ -40,3 +40,12 @@ export const JUDGMENT_COLORS = {
     miss: 0xff3333,    // red
     close: 0xff9900,   // orange
 } as const;
+
+export const HIT_ZONE_Y_RATIO = 0.85;
+export const LANE_AREA_WIDTH_RATIO = 0.5;
+export const TRACKPAD_LANE_AREA_RATIO = 0.2;
+export const BLOOM_SPIKE_INITIAL = 0.5;
+export const SHAKE_DURATION = 0.2;
+export const SHAKE_INTENSITY = 8;
+export const GLITCH_DURATION = 0.1;
+export const END_GAME_BUFFER = 2.0;

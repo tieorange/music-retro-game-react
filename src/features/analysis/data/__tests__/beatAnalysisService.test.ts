@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { BeatAnalysisService } from '../beatAnalysisService';
-import { BeatAnalysis } from '@/features/analysis/domain/types';;
+import { BeatAnalysis } from '@/features/analysis/domain/types';
 
 // @ts-ignore
 import queenMp3Url from '../../../../../Queen - We Will Rock You.mp3?url';

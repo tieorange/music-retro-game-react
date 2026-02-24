@@ -1,4 +1,4 @@
-import { Note, HitResult, HitJudgment, Lane } from '@/features/gameplay/domain/types';;
+import { Note, HitResult, HitJudgment, Lane } from '@/features/gameplay/domain/types';
 import { TIMING_WINDOWS, NOTE_FALL_DURATION } from '@/features/gameplay/domain/constants';
 
 export interface ActiveNote extends Note {
@@ -10,12 +10,13 @@ export interface ActiveNote extends Note {
 export class NoteTracker {
     private active: Map<string, ActiveNote> = new Map();
     private maxMissTime = TIMING_WINDOWS.good / 1000; // seconds
-    private onMissCallback: (noteId: string, lane: Lane) => void;
+    private onMissCallback?: (noteId: string, lane: Lane) => void;
 
-    constructor(notes: Note[], onMiss: (noteId: string, lane: Lane) => void) {
-        // We don't need 'notes' array anymore since scheduler spawns them dynamically
-        // But we keep the signature for compatibility or future use, so we just log it or ignore
-        console.debug(`NoteTracker initialized with ${notes.length} notes`);
+    constructor(onMiss?: (noteId: string, lane: Lane) => void) {
+        this.onMissCallback = onMiss;
+    }
+
+    public setOnMiss(onMiss: (noteId: string, lane: Lane) => void) {
         this.onMissCallback = onMiss;
     }
 
@@ -34,7 +35,7 @@ export class NoteTracker {
             if (!activeNote.isHit && !activeNote.isMissed) {
                 if (currentTime > activeNote.time + this.maxMissTime) {
                     activeNote.isMissed = true;
-                    this.onMissCallback(activeNote.id, activeNote.lane);
+                    if (this.onMissCallback) this.onMissCallback(activeNote.id, activeNote.lane);
                     // We can remove it from active after some time, or let it fall off screen
                     // For now, let the renderer remove it when it's way past
                     this.active.delete(id);

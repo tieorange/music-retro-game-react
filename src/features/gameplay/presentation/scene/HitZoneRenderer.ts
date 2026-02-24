@@ -1,6 +1,6 @@
 import { Container, Graphics } from 'pixi.js';
 import { LANE_COUNT, LANE_COLORS, JUDGMENT_COLORS } from '@/features/gameplay/domain/constants';
-import { HitJudgment } from '@/features/gameplay/domain/types';;
+import { HitJudgment } from '@/features/gameplay/domain/types';
 
 interface Ring {
     sprite: Graphics;
@@ -14,11 +14,13 @@ export class HitZoneRenderer extends Container {
     private laneWidth: number;
     private pads: Graphics[] = [];
     private rings: Ring[] = [];
+    private bpm: number;
 
-    constructor(width: number, y: number, laneCount: number = LANE_COUNT) {
+    constructor(width: number, y: number, laneCount: number = LANE_COUNT, bpm: number = 120) {
         super();
         this.y = y;
         this.laneWidth = width / laneCount;
+        this.bpm = bpm;
 
         // Base bar
         this.bar = new Graphics();
@@ -50,7 +52,7 @@ export class HitZoneRenderer extends Container {
         // Heartbeat - 30ms spike on beat, 150ms decay
         // Time is in seconds. Beat happens every integer time or based on Tone transport if synced.
         // For visual, a basic sin wave is easy, but a sharp sawtooth looks more like a heartbeat
-        const beatPhase = time * (120 / 60); // assuming 120 bpm for now, ideally tied to real BPM
+        const beatPhase = time * (this.bpm / 60);
         const pulse = Math.max(0, 1 - (beatPhase % 1) * 3); // sharp decay
         this.bar.alpha = 0.5 + pulse * 0.5;
 

@@ -1,7 +1,10 @@
 import * as Tone from 'tone';
-import { HitJudgment } from '@/features/gameplay/domain/types';;
+import { HitJudgment } from '@/features/gameplay/domain/types';
+import { IHitSoundPort } from '@/features/gameplay/application/ports/IHitSoundPort';
+import { IAudioMixerPort } from '@/features/audio/application/ports/IAudioMixerPort';
 
-export class HitSoundService {
+export class HitSoundService implements IHitSoundPort {
+    constructor(private mixer: IAudioMixerPort) { }
     private perfectSynth!: Tone.Synth;
     private greatSynth!: Tone.Synth;
     private goodSynth!: Tone.Synth;
@@ -10,7 +13,8 @@ export class HitSoundService {
     private milestoneSynth!: Tone.PolySynth;
     private breakSynth!: Tone.Synth;
 
-    private volumeNode!: Tone.Volume;
+    private compressor!: Tone.Compressor;
+    private limiter!: Tone.Limiter;
     private isInitialized = false;
 
     public async init() {
@@ -24,26 +28,33 @@ export class HitSoundService {
             console.warn("Could not start Tone.js audio context automatically.", error);
         }
 
-        // Master volume for hit sounds (mixed lower than music)
-        this.volumeNode = new Tone.Volume(-8).toDestination();
+        this.compressor = new Tone.Compressor({
+            threshold: -12,   // start compressing at -12 dBFS
+            ratio: 4,         // 4:1 compression ratio
+            attack: 0.003,    // fast attack to catch transients
+            release: 0.1,     // 100ms release
+        });
+        this.limiter = new Tone.Limiter(-1);  // hard ceiling at -1 dBFS
+        this.compressor.connect(this.limiter);
+        this.limiter.connect(this.mixer.sfxOutput);
 
         // PERFECT: High metallic TING
         this.perfectSynth = new Tone.Synth({
             oscillator: { type: 'sine' },
             envelope: { attack: 0.01, decay: 0.1, sustain: 0, release: 0.1 }
-        }).connect(this.volumeNode);
+        }).connect(this.compressor);
 
         // GREAT: Mid-frequency CLICK
         this.greatSynth = new Tone.Synth({
             oscillator: { type: 'square' },
             envelope: { attack: 0.01, decay: 0.05, sustain: 0, release: 0.05 }
-        }).connect(this.volumeNode);
+        }).connect(this.compressor);
 
         // GOOD: Softer TICK
         this.goodSynth = new Tone.Synth({
             oscillator: { type: 'triangle' },
             envelope: { attack: 0.01, decay: 0.05, sustain: 0, release: 0.05 }
-        }).connect(this.volumeNode);
+        }).connect(this.compressor);
 
         // MISS: Low THUD
         this.missSynth = new Tone.MembraneSynth({
@@ -51,19 +62,19 @@ export class HitSoundService {
             octaves: 2,
             oscillator: { type: 'sine' },
             envelope: { attack: 0.01, decay: 0.2, sustain: 0, release: 0.2 }
-        }).connect(this.volumeNode);
+        }).connect(this.compressor);
 
         // Milestones
         this.milestoneSynth = new Tone.PolySynth(Tone.Synth, {
             oscillator: { type: 'sawtooth' },
             envelope: { attack: 0.05, decay: 0.2, sustain: 0.2, release: 1 }
-        }).connect(this.volumeNode);
+        }).connect(this.compressor);
 
         // Combo Break
         this.breakSynth = new Tone.Synth({
             oscillator: { type: 'pwm', modulationFrequency: 0.2 },
             envelope: { attack: 0.05, decay: 0.3, sustain: 0, release: 0.2 }
-        }).connect(this.volumeNode);
+        }).connect(this.compressor);
 
         this.isInitialized = true;
     }
@@ -123,7 +134,8 @@ export class HitSoundService {
         this.missSynth.dispose();
         this.milestoneSynth.dispose();
         this.breakSynth.dispose();
-        this.volumeNode.dispose();
+        this.compressor.dispose();
+        this.limiter.dispose();
         this.isInitialized = false;
     }
 }

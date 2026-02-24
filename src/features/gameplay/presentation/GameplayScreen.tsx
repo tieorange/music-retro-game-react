@@ -38,11 +38,13 @@ export function GameplayScreen() {
         }
     }, [phase, setPhase]);
 
+    const mode = useGameStore(s => s.mode);
+
     useEffect(() => {
         if (!app || !engine) return;
 
         // Create scene early to see visuals during countdown
-        const scene = new GameScene(app, engine);
+        const scene = new GameScene(app, engine, mode);
         app.stage.addChild(scene);
 
         return () => {

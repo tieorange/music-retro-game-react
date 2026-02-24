@@ -104,7 +104,7 @@ export class NoteRenderer extends Container {
             // But NoteTracker sets spawnTime = time - NOTE_FALL_DURATION. 
             // So progress is 0 at spawn time, 1 at hit time.
 
-            const currentY = this.spawnY + (this.hitZoneY - this.spawnY) * Math.max(0, progress);
+            const currentY = this.spawnY + (this.hitZoneY - this.spawnY) * Math.max(0, Math.min(1, progress));
             vNote.y = currentY;
 
             // Approach fade

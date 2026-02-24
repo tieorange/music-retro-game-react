@@ -1,4 +1,21 @@
+import { MAX_AUDIO_FILE_SIZE, SUPPORTED_AUDIO_MIME_TYPES, SUPPORTED_AUDIO_EXTENSIONS } from '../domain/constants';
+import { AudioValidationError } from '../domain/errors';
+
+export function validateAudioFile(file: File): void {
+    if (file.size === 0) throw new AudioValidationError('FILE_EMPTY', 'File is empty');
+    if (file.size > MAX_AUDIO_FILE_SIZE)
+        throw new AudioValidationError('FILE_TOO_LARGE', `File exceeds ${MAX_AUDIO_FILE_SIZE / 1024 / 1024} MB limit`);
+
+    const hasValidType = SUPPORTED_AUDIO_MIME_TYPES.includes(file.type);
+    const hasValidExt = SUPPORTED_AUDIO_EXTENSIONS.some(ext =>
+        file.name.toLowerCase().endsWith(ext)
+    );
+    if (!hasValidType && !hasValidExt)
+        throw new AudioValidationError('FORMAT_UNSUPPORTED', 'Unsupported audio format');
+}
+
 export async function decodeAudioFile(file: File): Promise<AudioBuffer> {
+    validateAudioFile(file);
     const fileReader = new FileReader();
 
     return new Promise((resolve, reject) => {

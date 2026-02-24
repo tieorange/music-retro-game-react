@@ -70,4 +70,19 @@ describe('ComboTracker', () => {
         expect(tracker.combo).toBe(0);
         expect(tracker.multiplier).toBe(1);
     });
+
+    it('should return structured ComboResult detailing milestones and breaks', () => {
+        const tracker = new ComboTracker();
+
+        let res = tracker.hit('perfect');
+        expect(res).toEqual({ combo: 1, multiplier: 1, isMilestone: false, isBreak: false });
+
+        for (let i = 0; i < 8; i++) tracker.hit('perfect'); // 1 + 8 = 9
+
+        res = tracker.hit('perfect'); // 10th hit
+        expect(res).toEqual({ combo: 10, multiplier: 2, isMilestone: true, isBreak: false });
+
+        res = tracker.hit('miss');
+        expect(res).toEqual({ combo: 0, multiplier: 1, isMilestone: false, isBreak: true });
+    });
 });

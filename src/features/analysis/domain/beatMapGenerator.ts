@@ -1,5 +1,5 @@
 import { BeatAnalysis, BeatMap } from '@/features/analysis/domain/types';
-import { GameDifficulty, GameMode, Lane, Note } from '@/features/gameplay/domain/types';;
+import { GameDifficulty, GameMode, Lane, Note } from '@/features/gameplay/domain/types';
 import { LANE_COUNT } from '@/features/gameplay/domain/constants';
 import { nanoid } from 'nanoid';
 

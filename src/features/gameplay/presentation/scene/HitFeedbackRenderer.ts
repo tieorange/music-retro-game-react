@@ -1,6 +1,6 @@
 import { Container, Text, TextStyle, Graphics } from 'pixi.js';
 import { GameEventBus } from '../../domain/GameEventBus';
-import { HitEvent, MissEvent, NearMissEvent, ComboMilestoneEvent, ComboBreakEvent } from '@/features/gameplay/domain/types';;
+import { HitEvent, MissEvent, NearMissEvent, ComboMilestoneEvent, ComboBreakEvent } from '@/features/gameplay/domain/types';
 import { JUDGMENT_COLORS } from '@/features/gameplay/domain/constants';
 
 interface Particle {

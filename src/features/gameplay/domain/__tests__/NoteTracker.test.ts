@@ -12,7 +12,7 @@ describe('NoteTracker', () => {
     });
 
     it('should spawn a note and track it', () => {
-        const tracker = new NoteTracker([], vi.fn());
+        const tracker = new NoteTracker(vi.fn());
         const note = createNote('1', 2.0, 0);
 
         tracker.spawnNote(note);
@@ -26,7 +26,7 @@ describe('NoteTracker', () => {
     });
 
     it('should judge a perfect hit when within perfect window', () => {
-        const tracker = new NoteTracker([], vi.fn());
+        const tracker = new NoteTracker(vi.fn());
         tracker.spawnNote(createNote('1', 2.0, 1));
 
         // Time is exactly the scheduled time
@@ -41,7 +41,7 @@ describe('NoteTracker', () => {
     });
 
     it('should judge a great hit', () => {
-        const tracker = new NoteTracker([], vi.fn());
+        const tracker = new NoteTracker(vi.fn());
         tracker.spawnNote(createNote('1', 2.0, 1));
 
         // Outside perfect (30ms), inside great (70ms)
@@ -52,7 +52,7 @@ describe('NoteTracker', () => {
     });
 
     it('should judge a good hit', () => {
-        const tracker = new NoteTracker([], vi.fn());
+        const tracker = new NoteTracker(vi.fn());
         tracker.spawnNote(createNote('1', 2.0, 1));
 
         // Outside great (70ms), inside good (120ms)
@@ -63,7 +63,7 @@ describe('NoteTracker', () => {
     });
 
     it('should return null (miss/ghost) if hit is outside good window', () => {
-        const tracker = new NoteTracker([], vi.fn());
+        const tracker = new NoteTracker(vi.fn());
         tracker.spawnNote(createNote('1', 2.0, 1));
 
         // Outside good (120ms)
@@ -76,7 +76,7 @@ describe('NoteTracker', () => {
     });
 
     it('should return null if hit is in the wrong lane', () => {
-        const tracker = new NoteTracker([], vi.fn());
+        const tracker = new NoteTracker(vi.fn());
         tracker.spawnNote(createNote('1', 2.0, 1));
 
         const result = tracker.judgeHit(2, 2.0); // Wrong lane
@@ -87,7 +87,7 @@ describe('NoteTracker', () => {
 
     it('should trigger miss callback when note stays unhit past the good window', () => {
         const onMiss = vi.fn();
-        const tracker = new NoteTracker([], onMiss);
+        const tracker = new NoteTracker(onMiss);
         tracker.spawnNote(createNote('1', 2.0, 1));
 
         // Move time way past the note's target time
@@ -99,7 +99,7 @@ describe('NoteTracker', () => {
     });
 
     it('should get nearest note delta in ms', () => {
-        const tracker = new NoteTracker([], vi.fn());
+        const tracker = new NoteTracker(vi.fn());
         tracker.spawnNote(createNote('1', 2.0, 1));
 
         // Nearest delta for hit at 1.9s should be -100ms

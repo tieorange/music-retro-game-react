@@ -1,5 +1,7 @@
 import { guess } from 'web-audio-beat-detector';
-import { BeatAnalysis } from '@/features/analysis/domain/types';;
+import { BeatAnalysis } from '@/features/analysis/domain/types';
+import { OnsetAnalysisStrategy } from '@/features/analysis/domain/OnsetAnalysisStrategy';
+import { ConfidenceCalculator } from '@/features/analysis/domain/ConfidenceCalculator';
 import {
     buildOnsetEnvelope,
     estimateTempoFromEnvelope,
@@ -40,26 +42,32 @@ export class BeatAnalysisService {
             const alignedStrengths = refined.strengths.slice(downbeatPhase);
             const onsetBeats = alignedFrames.map((frame) => frame / envelopeData.frameRate);
 
-            // Fallback to tempo grid only if onset extraction is too weak.
-            const beats = onsetBeats.length >= 16
-                ? onsetBeats
-                : buildGridBeats(offset, duration, beatInterval);
+            const gridBeats = buildGridBeats(offset, duration, beatInterval);
 
-            const estimatedBpm = onsetBeats.length >= 16
-                ? tempoEstimate.bpm
-                : bpm;
+            const strategy = new OnsetAnalysisStrategy();
+            const strategyResult = strategy.determineBeats(
+                onsetBeats,
+                alignedStrengths,
+                gridBeats,
+                tempoEstimate.bpm,
+                bpm
+            );
 
-            const confidence = onsetBeats.length >= 16
-                ? Math.min(1, tempoEstimate.clarity * 0.7 + computeBeatAlignmentConfidence(envelopeData.envelope, tracked.frames) * 0.3)
-                : 0.35;
+            const calculator = new ConfidenceCalculator();
+            const alignmentConfidence = computeBeatAlignmentConfidence(envelopeData.envelope, tracked.frames);
+            const confidence = calculator.calculate(
+                strategyResult.hasEnoughOnsets,
+                tempoEstimate.clarity,
+                alignmentConfidence
+            );
 
             onProgress('Finalizing...', 100);
 
             return {
-                bpm: estimatedBpm,
-                beats,
+                bpm: strategyResult.bpm,
+                beats: strategyResult.beats,
                 confidence,
-                beatStrengths: onsetBeats.length >= 16 ? alignedStrengths : undefined
+                beatStrengths: strategyResult.beatStrengths
             };
         } catch (error: any) {
             throw new Error('Analysis failed: ' + error.message);

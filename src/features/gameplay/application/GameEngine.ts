@@ -1,22 +1,28 @@
 import { BeatMap } from '@/features/analysis/domain/types';
-import { Lane } from '@/features/gameplay/domain/types';
+import { Lane, HitResult } from '@/features/gameplay/domain/types';
 import { IAudioPlaybackPort } from './ports/IAudioPlaybackPort';
 import { IGameStatePort } from './ports/IGameStatePort';
-import { NoteScheduler } from '../data/NoteScheduler';
-import { NoteTracker } from '../domain/NoteTracker';
+import { INoteSchedulerPort } from './ports/INoteSchedulerPort';
+import { IHitSoundPort } from './ports/IHitSoundPort';
+import { ITimeProvider } from './ports/ITimeProvider';
 import { ScoringEngine } from '@/features/scoring/domain/ScoringEngine';
-import { ComboTracker } from '@/features/scoring/domain/ComboTracker';
+import { ComboTracker } from '../domain/ComboTracker';
 import { GameEventBus } from '../domain/GameEventBus';
-import { COMBO_THRESHOLDS, NEAR_MISS_WINDOW } from '@/features/gameplay/domain/constants';
+import { NoteTracker } from '../domain/NoteTracker';
+import { NEAR_MISS_WINDOW, END_GAME_BUFFER } from '@/features/gameplay/domain/constants';
 
 export class GameEngine {
     private playback: IAudioPlaybackPort;
     private state: IGameStatePort;
-    private scheduler: NoteScheduler;
+    private scheduler: INoteSchedulerPort;
     private tracker: NoteTracker;
+    public hitSounds: IHitSoundPort;
+    public timeProvider: ITimeProvider;
     private scoring: ScoringEngine;
     private combo: ComboTracker;
-    private beatMap: BeatMap;
+    private _score: number = 0;
+    private hitResults: HitResult[] = [];
+    public beatMap: BeatMap;
     private _isRunning: boolean = false;
     public events: GameEventBus;
 
@@ -24,13 +30,30 @@ export class GameEngine {
         return this._isRunning;
     }
 
-    constructor(beatMap: BeatMap, playback: IAudioPlaybackPort, state: IGameStatePort) {
+    public get score(): number { return this._score; }
+    public get currentCombo(): number { return this.combo.combo; }
+    public get currentMultiplier(): number { return this.combo.multiplier; }
+    public get currentTime(): number { return this.timeProvider.getCurrentTime(); }
+
+    constructor(
+        beatMap: BeatMap,
+        playback: IAudioPlaybackPort,
+        state: IGameStatePort,
+        scheduler: INoteSchedulerPort,
+        hitSounds: IHitSoundPort,
+        timeProvider: ITimeProvider,
+        tracker: NoteTracker
+    ) {
         this.playback = playback;
         this.state = state;
         this.beatMap = beatMap;
+        this.scheduler = scheduler;
+        this.hitSounds = hitSounds;
+        this.timeProvider = timeProvider;
+        this.tracker = tracker;
 
-        this.scheduler = new NoteScheduler();
-        this.tracker = new NoteTracker(beatMap.notes, this.handleAutoMiss.bind(this));
+        this.tracker.setOnMiss(this.handleAutoMiss.bind(this));
+
         this.scoring = new ScoringEngine();
         this.combo = new ComboTracker();
         this.events = new GameEventBus();
@@ -52,7 +75,7 @@ export class GameEngine {
         this.state.setCurrentTime(currentTime);
 
         const song = this.state.song;
-        if (song && currentTime >= song.duration + 2.0) {
+        if (song && currentTime >= song.duration + END_GAME_BUFFER) {
             this.endGame();
         }
     }
@@ -62,29 +85,30 @@ export class GameEngine {
 
         const result = this.tracker.judgeHit(lane, time);
         if (result) {
-            this.combo.hit(result.judgment);
-            result.comboAtHit = this.combo.combo;
+            const comboResult = this.combo.hit(result.judgment);
+            result.comboAtHit = comboResult.combo;
 
             this.events.emit('hit', {
                 judgment: result.judgment,
                 lane,
-                combo: this.combo.combo,
-                multiplier: this.combo.multiplier
+                combo: comboResult.combo,
+                multiplier: comboResult.multiplier
             });
 
-            const isMilestone = COMBO_THRESHOLDS.some(t => t.combo === this.combo.combo) || (this.combo.combo >= 50 && this.combo.combo % 50 === 0);
-            if (isMilestone && this.combo.combo >= 10) {
-                this.events.emit('combo-milestone', { combo: this.combo.combo });
+            if (comboResult.isMilestone) {
+                this.events.emit('combo-milestone', { combo: comboResult.combo });
             }
 
             const addedScore = this.scoring.calculateScore(result.judgment, this.combo.multiplier);
+            this._score += addedScore;
 
             this.state.updateScoreAndCombo(
-                this.state.score + addedScore,
+                this._score,
                 this.combo.combo,
                 this.combo.multiplier
             );
 
+            this.hitResults.push(result);
             this.state.addHitResult(result);
         } else {
             const nearestDelta = this.tracker.getNearestNoteDelta(lane, time);
@@ -105,13 +129,15 @@ export class GameEngine {
         }
         this.events.emit('miss', { lane });
 
-        this.state.updateScoreAndCombo(this.state.score, 0, 1);
-        this.state.addHitResult({
+        this.state.updateScoreAndCombo(this._score, 0, 1);
+        const hitResult: HitResult = {
             noteId,
             judgment: 'miss',
             delta: 0,
             comboAtHit: 0
-        });
+        };
+        this.hitResults.push(hitResult);
+        this.state.addHitResult(hitResult);
     }
 
     public pause(): void {
@@ -136,9 +162,9 @@ export class GameEngine {
             song.id,
             song.name,
             this.beatMap.notes.length,
-            this.state.hitResults,
+            this.hitResults,
             this.combo.maxCombo,
-            this.state.score
+            this._score
         );
 
         this.state.setFinalScore(finalScore);

@@ -1,5 +1,5 @@
 import { HitJudgment, HitResult } from '@/features/gameplay/domain/types';
-import { GameScore } from '@/features/scoring/domain/types';;
+import { GameScore } from '@/features/scoring/domain/types';
 import { SCORE_VALUES, GRADE_THRESHOLDS } from '@/features/gameplay/domain/constants';
 
 export class ScoringEngine {

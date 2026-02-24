@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { generateBeatMap } from '../beatMapGenerator';
-import { BeatAnalysis } from '@/features/analysis/domain/types';;
+import { BeatAnalysis } from '@/features/analysis/domain/types';
 
 describe('beatMapGenerator', () => {
     it('should scale note density appropriately across difficulty levels', () => {

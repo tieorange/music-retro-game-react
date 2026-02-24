@@ -1,5 +1,13 @@
-import { HitJudgment } from '@/features/gameplay/domain/types';;
+import { HitJudgment } from '@/features/gameplay/domain/types';
 import { COMBO_THRESHOLDS } from '@/features/gameplay/domain/constants';
+
+export interface ComboResult {
+    combo: number;
+    multiplier: number;
+    isMilestone: boolean;
+    isBreak: boolean;
+}
+
 
 export class ComboTracker {
     private _combo: number = 0;
@@ -18,11 +26,15 @@ export class ComboTracker {
         return this._multiplier;
     }
 
-    public hit(judgment: HitJudgment): void {
+    public hit(judgment: HitJudgment): ComboResult {
+        let isBreak = false;
+        let isMilestone = false;
+
         if (judgment === 'miss') {
+            isBreak = this._combo > 0;
             this._combo = 0;
             this.updateMultiplier();
-            return;
+            return { combo: this._combo, multiplier: this._multiplier, isMilestone, isBreak };
         }
 
         this._combo++;
@@ -31,6 +43,13 @@ export class ComboTracker {
         }
 
         this.updateMultiplier();
+
+        const isThreshold = COMBO_THRESHOLDS.some(t => t.combo === this._combo) || (this._combo >= 50 && this._combo % 50 === 0);
+        if (isThreshold && this._combo >= 10) {
+            isMilestone = true;
+        }
+
+        return { combo: this._combo, multiplier: this._multiplier, isMilestone, isBreak };
     }
 
     private updateMultiplier(): void {

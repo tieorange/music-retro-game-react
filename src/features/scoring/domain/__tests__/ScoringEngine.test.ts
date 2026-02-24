@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { ScoringEngine } from '../ScoringEngine';
-import { HitResult } from '@/features/gameplay/domain/types';;
+import { HitResult } from '@/features/gameplay/domain/types';
 import { SCORE_VALUES } from '@/features/gameplay/domain/constants';
 
 describe('ScoringEngine', () => {

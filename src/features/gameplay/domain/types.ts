@@ -1,6 +1,6 @@
 import { Song } from '../../audio/domain/types';
 import { BeatMap } from '../../analysis/domain/types';
-import { GameScore } from '../../scoring/domain/types';
+import { GameScore } from '@/features/scoring/domain/types';
 
 export type Lane = 0 | 1 | 2 | 3;
 export type GameMode = 'classic' | 'trackpad';
@@ -45,6 +45,9 @@ export interface GameState {
     hitResults: HitResult[];
     finalScore: GameScore | null;
     highScores: GameScore[];
+    musicVolume: number;
+    sfxVolume: number;
+    masterVolume: number;
 }
 
 export interface HitEvent {

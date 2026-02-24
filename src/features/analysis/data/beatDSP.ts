@@ -97,8 +97,8 @@ export function estimateTempoFromEnvelope(
         return { bestLag: lag, bpm: fallbackBpm, clarity: 0 };
     }
 
-    const minBpm = 70;
-    const maxBpm = 190;
+    const minBpm = Math.max(50, 50); // Optional params in future
+    const maxBpm = Math.min(220, 220);
     const minLag = Math.max(1, Math.floor((60 / maxBpm) * frameRate));
     const maxLag = Math.max(minLag + 1, Math.ceil((60 / minBpm) * frameRate));
 
@@ -111,27 +111,47 @@ export function estimateTempoFromEnvelope(
         for (let i = lag; i < envelope.length; i++) {
             ac += envelope[i] * envelope[i - lag];
         }
-        // Favor lags near fallback guess slightly, to reduce octave mistakes.
-        const lagSeconds = lag / frameRate;
-        const bpm = 60 / lagSeconds;
-        const proximity = 1 - Math.min(1, Math.abs(bpm - fallbackBpm) / fallbackBpm);
-        const score = ac * (0.9 + proximity * 0.1);
 
-        if (score > bestScore) {
+        if (ac > bestScore) {
             secondBest = bestScore;
-            bestScore = score;
+            bestScore = ac;
             bestLag = lag;
-        } else if (score > secondBest) {
-            secondBest = score;
+        } else if (ac > secondBest) {
+            secondBest = ac;
         }
     }
+
+    // Octave-correction: test bestLag alongside 2x and 0.5x
+    const candidates = [bestLag, bestLag * 2, Math.round(bestLag / 2)]
+        .filter(lag => lag >= minLag && lag <= maxLag);
+
+    let finalBestLag = bestLag;
+    let finalScore = -Infinity;
+
+    for (const lag of candidates) {
+        let ac = 0;
+        for (let i = lag; i < envelope.length; i++) ac += envelope[i] * envelope[i - lag];
+
+        const candidateBpm = 60 / (lag / frameRate);
+        const sweetSpotProximity = 1 - Math.min(1, Math.abs(candidateBpm - 120) / 80);
+        const anchorProximity = 1 - Math.min(1, Math.abs(candidateBpm - fallbackBpm) / fallbackBpm);
+
+        const score = ac * (0.8 + sweetSpotProximity * 0.1 + anchorProximity * 0.1);
+
+        if (score > finalScore) {
+            finalScore = score;
+            finalBestLag = lag;
+        }
+    }
+
+    bestLag = finalBestLag;
 
     const bpm = Math.round(60 / (bestLag / frameRate));
     const clarity = bestScore > 0 ? Math.max(0, Math.min(1, (bestScore - Math.max(0, secondBest)) / bestScore)) : 0;
 
     return {
         bestLag,
-        bpm: Math.max(70, Math.min(190, bpm)),
+        bpm: Math.max(50, Math.min(220, bpm)),
         clarity,
     };
 }

@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { GameState, GamePhase, HitResult, GameMode, GameDifficulty } from '@/features/gameplay/domain/types';
 import { Song } from '@/features/audio/domain/types';
 import { BeatMap } from '@/features/analysis/domain/types';
-import { GameScore } from '@/features/scoring/domain/types';;
+import { GameScore } from '@/features/scoring/domain/types';
 
 interface GameActions {
     setPhase: (phase: GamePhase) => void;
@@ -15,6 +15,10 @@ interface GameActions {
     addHitResult: (result: HitResult) => void;
     setFinalScore: (score: GameScore) => void;
     setHighScores: (scores: GameScore[]) => void;
+    setMusicVolume: (db: number) => void;
+    setSfxVolume: (db: number) => void;
+    setMasterVolume: (db: number) => void;
+    clearAudioBuffer: () => void;
     reset: () => void;
 }
 
@@ -33,6 +37,9 @@ const initialState: GameState = {
     hitResults: [],
     finalScore: null,
     highScores: [],
+    musicVolume: -6,
+    sfxVolume: -8,
+    masterVolume: 0,
 };
 
 export const useGameStore = create<GameStore>((set) => ({
@@ -57,6 +64,14 @@ export const useGameStore = create<GameStore>((set) => ({
     setFinalScore: (finalScore) => set({ finalScore }),
 
     setHighScores: (highScores) => set({ highScores }),
+
+    clearAudioBuffer: () => set((state) => ({
+        song: state.song ? { ...state.song, audioBuffer: null } : null,
+    })),
+
+    setMusicVolume: (musicVolume) => set({ musicVolume }),
+    setSfxVolume: (sfxVolume) => set({ sfxVolume }),
+    setMasterVolume: (masterVolume) => set({ masterVolume }),
 
     reset: () => set((state) => ({
         ...initialState,

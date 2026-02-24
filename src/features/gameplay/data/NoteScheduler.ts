@@ -1,8 +1,9 @@
 import * as Tone from 'tone';
-import { Note } from '@/features/gameplay/domain/types';;
+import { Note } from '@/features/gameplay/domain/types';
 import { NOTE_FALL_DURATION } from '@/features/gameplay/domain/constants';
+import { INoteSchedulerPort } from '@/features/gameplay/application/ports/INoteSchedulerPort';
 
-export class NoteScheduler {
+export class NoteScheduler implements INoteSchedulerPort {
     private events: number[] = [];
 
     public scheduleAll(notes: Note[], onSpawn: (note: Note) => void): void {
@@ -17,15 +18,22 @@ export class NoteScheduler {
             // Better to pad the start of the Transport.
             const spawnTime = note.time - NOTE_FALL_DURATION;
 
-            // Schedule accurate callbacks via Tone Transport
-            const eventId = Tone.getTransport().schedule((audioTime) => {
-                // Tie to animation frame via Draw.schedule
-                Tone.Draw.schedule(() => {
-                    onSpawn(note);
-                }, audioTime);
-            }, Math.max(0, spawnTime));
-
-            this.events.push(eventId);
+            if (spawnTime < 0) {
+                // Spawn immediately when Transport starts, with pre-computed progress
+                const eventId = Tone.getTransport().schedule((audioTime) => {
+                    Tone.Draw.schedule(() => onSpawn(note), audioTime);
+                }, 0);
+                this.events.push(eventId);
+            } else {
+                // Schedule accurate callbacks via Tone Transport
+                const eventId = Tone.getTransport().schedule((audioTime) => {
+                    // Tie to animation frame via Draw.schedule
+                    Tone.Draw.schedule(() => {
+                        onSpawn(note);
+                    }, audioTime);
+                }, spawnTime);
+                this.events.push(eventId);
+            }
         });
     }
 

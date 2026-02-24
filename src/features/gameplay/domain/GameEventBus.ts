@@ -1,4 +1,4 @@
-import { GameEvent } from '@/features/gameplay/domain/types';;
+import { GameEvent } from '@/features/gameplay/domain/types';
 
 type EventHandler<T extends GameEvent['type']> = (
     data: Extract<GameEvent, { type: T }>['data']

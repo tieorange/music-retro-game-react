@@ -1,9 +1,11 @@
 import * as Tone from 'tone';
+import { IAudioMixerPort } from '../application/ports/IAudioMixerPort';
 
 export class AudioPlaybackService {
     private player: Tone.Player | null = null;
-    private analyser: Tone.Analyser | null = null;
     private isDestroyed = false;
+
+    constructor(private mixer: IAudioMixerPort) { }
 
     public async load(audioBuffer: AudioBuffer): Promise<void> {
         // Create Tone.js AudioBuffer from standard AudioBuffer
@@ -14,12 +16,17 @@ export class AudioPlaybackService {
             return;
         }
 
-        this.player = new Tone.Player(toneBuffer).toDestination();
+        this.player = new Tone.Player(toneBuffer);
+        this.player.fadeIn = 0.05;   // 50ms fade-in — imperceptible but eliminates click
+        this.player.fadeOut = 0.3;    // 300ms fade-out — smooth ending
+        this.player.connect(this.mixer.musicOutput);
         this.player.sync().start(0);
+    }
 
-        // Create FFT analyser for visualizer
-        this.analyser = new Tone.Analyser('fft', 32);
-        this.player.connect(this.analyser);
+    public async warmUp(): Promise<void> {
+        if (Tone.context.state !== 'running') {
+            await Tone.start();
+        }
     }
 
     public async start(): Promise<void> {
@@ -49,20 +56,14 @@ export class AudioPlaybackService {
         return Tone.getTransport().seconds;
     }
 
-    public getAnalyser(): Tone.Analyser | null {
-        return this.analyser;
-    }
-
     public destroy(): void {
         this.isDestroyed = true;
         this.stop();
+        Tone.getTransport().cancel();
+        Tone.getTransport().position = 0;
         if (this.player) {
             this.player.dispose();
             this.player = null;
-        }
-        if (this.analyser) {
-            this.analyser.dispose();
-            this.analyser = null;
         }
     }
 }

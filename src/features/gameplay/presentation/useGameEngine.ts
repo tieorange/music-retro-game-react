@@ -2,26 +2,39 @@ import { useEffect, useRef, useState } from 'react';
 import { useGameStore } from '@/state/gameStore';
 import { GameEngine } from '../application/GameEngine';
 import { AudioPlaybackService } from '@/features/audio/data/audioPlayback';
+import { AudioMixer } from '@/features/audio/data/AudioMixer';
 import { IGameStatePort } from '../application/ports/IGameStatePort';
+import { NoteScheduler } from '../data/NoteScheduler';
+import { HitSoundService } from '../data/hitSounds';
+import { ToneTimeProvider } from '../data/ToneTimeProvider';
+import { NoteTracker } from '../domain/NoteTracker';
 
 export function useGameEngine() {
     const phase = useGameStore(s => s.phase);
     const song = useGameStore(s => s.song);
     const beatMap = useGameStore(s => s.beatMap);
+    const musicVolume = useGameStore(s => s.musicVolume);
+    const sfxVolume = useGameStore(s => s.sfxVolume);
+    const masterVolume = useGameStore(s => s.masterVolume);
 
     const engineRef = useRef<GameEngine | null>(null);
+    const mixerRef = useRef<AudioMixer | null>(null);
     const [engine, setEngine] = useState<GameEngine | null>(null);
 
     useEffect(() => {
         let mounted = true;
 
         if ((phase === 'playing' || phase === 'countdown') && !engineRef.current && song && beatMap) {
-            const playback = new AudioPlaybackService();
+            const mixer = new AudioMixer();
+            mixerRef.current = mixer;
+            mixer.setMusicVolume(useGameStore.getState().musicVolume);
+            mixer.setSfxVolume(useGameStore.getState().sfxVolume);
+            mixer.setMasterVolume(useGameStore.getState().masterVolume);
+
+            const playback = new AudioPlaybackService(mixer);
 
             const stateAdapter: IGameStatePort = {
                 get song() { return useGameStore.getState().song; },
-                get score() { return useGameStore.getState().score; },
-                get hitResults() { return useGameStore.getState().hitResults; },
                 setCurrentTime: (time) => useGameStore.getState().setCurrentTime(time),
                 setPhase: (phase) => useGameStore.getState().setPhase(phase),
                 updateScoreAndCombo: (score, combo, multiplier) => useGameStore.getState().updateScoreAndCombo(score, combo, multiplier),
@@ -31,14 +44,30 @@ export function useGameEngine() {
 
             const initialize = async () => {
                 try {
-                    await playback.load(song!.audioBuffer);
+                    await playback.load(song!.audioBuffer!);
+                    useGameStore.getState().clearAudioBuffer();
+
+                    if (phase === 'countdown') {
+                        await playback.warmUp();
+                    }
 
                     if (!mounted) {
                         playback.destroy();
                         return;
                     }
 
-                    const localEngine = new GameEngine(beatMap!, playback, stateAdapter);
+                    const hitSounds = new HitSoundService(mixer);
+                    await hitSounds.init();
+
+                    const localEngine = new GameEngine(
+                        beatMap!,
+                        playback,
+                        stateAdapter,
+                        new NoteScheduler(),
+                        hitSounds,
+                        new ToneTimeProvider(),
+                        new NoteTracker()
+                    );
                     engineRef.current = localEngine;
                     setEngine(localEngine);
                 } catch (error) {
@@ -61,6 +90,10 @@ export function useGameEngine() {
                 engineRef.current = null;
                 setEngine(null);
             }
+            if (mixerRef.current) {
+                mixerRef.current.destroy();
+                mixerRef.current = null;
+            }
         };
     }, [phase, song, beatMap]);
 
@@ -73,6 +106,14 @@ export function useGameEngine() {
             });
         }
     }, [phase, engine]);
+
+    useEffect(() => {
+        if (mixerRef.current) {
+            mixerRef.current.setMusicVolume(musicVolume);
+            mixerRef.current.setSfxVolume(sfxVolume);
+            mixerRef.current.setMasterVolume(masterVolume);
+        }
+    }, [musicVolume, sfxVolume, masterVolume]);
 
     return engine;
 }
