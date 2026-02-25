@@ -92,13 +92,15 @@ export function estimateTempoFromEnvelope(
     frameRate: number,
     fallbackBpm: number
 ): { bestLag: number; bpm: number; clarity: number } {
+    if (!fallbackBpm || fallbackBpm <= 0) fallbackBpm = 120; // Guard B-01
+
     if (envelope.length < 8) {
         const lag = Math.max(1, Math.round((60 / fallbackBpm) * frameRate));
         return { bestLag: lag, bpm: fallbackBpm, clarity: 0 };
     }
 
-    const minBpm = Math.max(50, 50); // Optional params in future
-    const maxBpm = Math.min(220, 220);
+    const minBpm = 50;
+    const maxBpm = 220;
     const minLag = Math.max(1, Math.floor((60 / maxBpm) * frameRate));
     const maxLag = Math.max(minLag + 1, Math.ceil((60 / minBpm) * frameRate));
 
@@ -172,6 +174,7 @@ export function trackBeats(envelope: number[], targetLag: number): { frames: num
         let bestPrev = -1;
 
         for (let lag = lagMin; lag <= lagMax; lag++) {
+            if (lag <= 0) continue; // Guard B-02
             const prevIdx = i - lag;
             if (prevIdx < 0) continue;
 

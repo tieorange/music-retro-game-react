@@ -19,17 +19,21 @@ export function usePixiApp() {
         // Make it relative to the container
         containerRef.current.appendChild(canvas);
 
-        createPixiApp(canvas).then((pixiApp) => {
+        let cleanupFn: (() => void) | null = null;
+        createPixiApp(canvas).then(({ app: pixiApp, cleanup }) => {
             if (isDestroyed) {
+                cleanup();
                 pixiApp.destroy(true, { children: true, texture: false });
                 return;
             }
             localApp = pixiApp;
+            cleanupFn = cleanup;
             setApp(pixiApp);
         });
 
         return () => {
             isDestroyed = true;
+            if (cleanupFn) cleanupFn();
             if (localApp) {
                 localApp.destroy(true, { children: true, texture: false });
             } else if (canvas.parentElement) {

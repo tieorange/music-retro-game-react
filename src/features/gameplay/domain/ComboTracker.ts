@@ -8,6 +8,8 @@ export interface ComboResult {
     isBreak: boolean;
 }
 
+const SORTED_THRESHOLDS = [...COMBO_THRESHOLDS].sort((a, b) => a.combo - b.combo);
+
 
 export class ComboTracker {
     private _combo: number = 0;
@@ -44,7 +46,7 @@ export class ComboTracker {
 
         this.updateMultiplier();
 
-        const isThreshold = COMBO_THRESHOLDS.some(t => t.combo === this._combo) || (this._combo >= 50 && this._combo % 50 === 0);
+        const isThreshold = COMBO_THRESHOLDS.some(t => t.combo === this._combo);
         if (isThreshold && this._combo >= 10) {
             isMilestone = true;
         }
@@ -54,8 +56,7 @@ export class ComboTracker {
 
     private updateMultiplier(): void {
         let newMul = 1;
-        const sortedThresholds = [...COMBO_THRESHOLDS].sort((a, b) => a.combo - b.combo);
-        for (const t of sortedThresholds) {
+        for (const t of SORTED_THRESHOLDS) {
             if (this._combo >= t.combo) {
                 newMul = t.multiplier;
             }

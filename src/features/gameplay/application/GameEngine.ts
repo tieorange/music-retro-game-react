@@ -9,7 +9,8 @@ import { ScoringEngine } from '@/features/scoring/domain/ScoringEngine';
 import { ComboTracker } from '../domain/ComboTracker';
 import { GameEventBus } from '../domain/GameEventBus';
 import { NoteTracker } from '../domain/NoteTracker';
-import { NEAR_MISS_WINDOW, END_GAME_BUFFER } from '@/features/gameplay/domain/constants';
+import { NEAR_MISS_WINDOW } from '@/features/gameplay/domain/constants';
+import { logInfo, setGameSnapshot } from '@/core/logging';
 
 export class GameEngine {
     private playback: IAudioPlaybackPort;
@@ -25,6 +26,7 @@ export class GameEngine {
     public beatMap: BeatMap;
     private _isRunning: boolean = false;
     private _hasStarted: boolean = false;
+    private _lastScoreLogTime: number = 0;
     public events: GameEventBus;
 
     public get isRunning(): boolean {
@@ -73,6 +75,8 @@ export class GameEngine {
         await this.playback.start();
         this._isRunning = true;
         this._hasStarted = true;
+        logInfo('game.start', { noteCount: this.beatMap.notes.length, bpm: this.beatMap.bpm });
+        setGameSnapshot({ phase: 'playing' });
     }
 
     public update(currentTime: number): void {
@@ -81,13 +85,24 @@ export class GameEngine {
         const { holdTicks } = this.tracker.update(currentTime);
         this.state.setCurrentTime(currentTime);
 
+        const now = performance.now();
+        if (now - this._lastScoreLogTime > 250) {
+            logInfo('game.score.updated', {
+                score: this._score,
+                combo: this.combo.combo,
+                multiplier: this.combo.multiplier,
+            });
+            setGameSnapshot({ score: this._score, maxCombo: this.combo.maxCombo, phase: 'playing' });
+            this._lastScoreLogTime = now;
+        }
+
         if (holdTicks > 0) {
             this._score += holdTicks * 10 * this.combo.multiplier;
             this.state.updateScoreAndCombo(this._score, this.combo.combo, this.combo.multiplier);
         }
 
         const song = this.state.song;
-        if (song && currentTime >= song.duration + END_GAME_BUFFER) {
+        if (song && currentTime >= song.duration + 0.5) {
             this.endGame();
         }
     }
@@ -125,6 +140,7 @@ export class GameEngine {
             this.hitResults.push(result);
             this.state.addHitResult(result);
         } else {
+            // Unused input, possibly near-miss
             const nearestDelta = this.tracker.getNearestNoteDelta(lane, time);
             if (nearestDelta !== null && Math.abs(nearestDelta) <= NEAR_MISS_WINDOW) {
                 this.events.emit('near-miss', { lane });
@@ -157,7 +173,7 @@ export class GameEngine {
             noteId,
             judgment: 'miss',
             delta: 0,
-            comboAtHit: 0
+            comboAtHit: previousCombo
         };
         this.hitResults.push(hitResult);
         this.state.addHitResult(hitResult);
@@ -167,6 +183,8 @@ export class GameEngine {
         this._isRunning = false;
         this.playback.pause();
         this.state.setPhase('paused');
+        logInfo('game.pause', { score: this._score, combo: this.combo.combo });
+        setGameSnapshot({ phase: 'paused' });
     }
 
     public resume(): void {
@@ -174,6 +192,8 @@ export class GameEngine {
         this.state.setPhase('playing');
         this._isRunning = true;
         this.playback.resume();
+        logInfo('game.resume', {});
+        setGameSnapshot({ phase: 'playing' });
     }
 
     public retry(): void {
@@ -190,6 +210,8 @@ export class GameEngine {
         // Seek to 0 so when playback starts again, it starts from beginning
         this.playback.seek(0);
         this.state.setPhase('countdown');
+        logInfo('game.retry', {});
+        setGameSnapshot({ score: 0, maxCombo: 0, phase: 'countdown' });
     }
 
     public endGame(): void {
@@ -211,6 +233,13 @@ export class GameEngine {
 
         this.state.setFinalScore(finalScore);
         this.state.setPhase('results');
+        logInfo('game.end', {
+            score: this._score,
+            maxCombo: this.combo.maxCombo,
+            hits: this.hitResults.filter(r => r.judgment !== 'miss').length,
+            misses: this.hitResults.filter(r => r.judgment === 'miss').length,
+        });
+        setGameSnapshot({ score: this._score, maxCombo: this.combo.maxCombo, phase: 'results' });
     }
 
     public destroy(): void {

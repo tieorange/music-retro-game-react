@@ -1,6 +1,7 @@
 import { HitJudgment, HitResult } from '@/features/gameplay/domain/types';
 import { GameScore } from '@/features/scoring/domain/types';
 import { SCORE_VALUES, GRADE_THRESHOLDS } from '@/features/gameplay/domain/constants';
+import { logWarn } from '@/core/logging';
 
 export class ScoringEngine {
     public calculateScore(judgment: HitJudgment, multiplier: number): number {
@@ -44,10 +45,18 @@ export class ScoringEngine {
         });
 
         // Handle missed notes that weren't recorded (though GameEngine should record them)
-        const unaccounted = totalNotes - hitResults.length;
+        const unaccounted = Math.max(0, totalNotes - hitResults.length);
         if (unaccounted > 0) misses += unaccounted;
 
-        const accuracy = totalNotes > 0 ? (weightedSum / totalNotes) * 100 : 0;
+        const accuracy = Math.min(100, Math.max(0, totalNotes > 0 ? (weightedSum / totalNotes) * 100 : 0));
+
+        if (hitResults.length > totalNotes) {
+            logWarn('scoring.hit_result.overflow', {
+                hitResults: hitResults.length,
+                totalNotes,
+                delta: hitResults.length - totalNotes,
+            });
+        }
 
         let grade: 'S' | 'A' | 'B' | 'C' = 'C';
         if (accuracy >= GRADE_THRESHOLDS.S) grade = 'S';

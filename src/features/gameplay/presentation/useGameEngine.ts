@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useGameStore } from '@/state/gameStore';
+import { logError, logInfo, logWarn } from '@/core/logging';
 import { GameEngine } from '../application/GameEngine';
 import { AudioPlaybackService } from '@/features/audio/data/audioPlayback';
 import { AudioMixer } from '@/features/audio/data/AudioMixer';
@@ -77,9 +78,24 @@ export function useGameEngine() {
                         new NoteTracker()
                     );
                     engineRef.current = localEngine;
+
+                    localEngine.events.on('hit', (data) => {
+                        logInfo('game.input.hit', {
+                            judgment: data.judgment,
+                            lane: data.lane,
+                            combo: data.combo,
+                        });
+                    });
+                    localEngine.events.on('miss', (data) => {
+                        logInfo('game.input.miss', { lane: data.lane });
+                    });
+                    localEngine.events.on('combo-break', (data) => {
+                        logWarn('game.combo.break', { previousCombo: data.previousCombo });
+                    });
+
                     setEngine(localEngine);
                 } catch (error) {
-                    console.error('Failed to initialize game engine:', error);
+                    logError('game.engine.init.failed', {}, error);
                     playback.destroy();
                     if (mounted) {
                         useGameStore.getState().setPhase('idle');
@@ -109,7 +125,7 @@ export function useGameEngine() {
         if (phase === 'playing' && engine && !engine.isRunning) {
             engine.start().catch((err) => {
                 if (err.message !== "disposed") {
-                    console.error("Game engine failed to start", err);
+                    logError('game.engine.start.failed', {}, err);
                 }
             });
         }

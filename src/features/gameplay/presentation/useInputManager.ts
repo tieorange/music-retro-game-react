@@ -98,10 +98,8 @@ export function useInputManager(engine: GameEngine | null) {
                 } else {
                     const screenWidth = window.innerWidth;
                     const laneWidth = screenWidth / 4;
-                    // Map touch X coordinate to lane 0-3
-                    lane = Math.floor(touch.clientX / laneWidth) as 0 | 1 | 2 | 3;
-                    if (lane < 0) lane = 0;
-                    if (lane > 3) lane = 3;
+                    const rawLane = Math.floor(touch.clientX / laneWidth);
+                    lane = Math.max(0, Math.min(3, rawLane)) as 0 | 1 | 2 | 3;
                 }
 
                 if (lane !== undefined) {
@@ -136,9 +134,8 @@ export function useInputManager(engine: GameEngine | null) {
                 } else {
                     const screenWidth = window.innerWidth;
                     const laneWidth = screenWidth / 4;
-                    lane = Math.floor(touch.clientX / laneWidth) as 0 | 1 | 2 | 3;
-                    if (lane < 0) lane = 0;
-                    if (lane > 3) lane = 3;
+                    const rawLane = Math.floor(touch.clientX / laneWidth);
+                    lane = Math.max(0, Math.min(3, rawLane)) as 0 | 1 | 2 | 3;
                 }
 
                 if (lane !== undefined) {

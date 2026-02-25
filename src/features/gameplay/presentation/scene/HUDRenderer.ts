@@ -86,9 +86,6 @@ export class HUDRenderer extends Container {
         this.multiplierText.anchor.set(0.5);
         this.addChild(this.multiplierText);
 
-        // We use height inside the class for consistency or future layout logic
-        if (height < 0) console.log(height);
-
         events.on('miss', () => {
             if (!this.hasMissed) {
                 this.hasMissed = true;

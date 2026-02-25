@@ -2,6 +2,7 @@ import * as Tone from 'tone';
 import { HitJudgment } from '@/features/gameplay/domain/types';
 import { IHitSoundPort } from '@/features/gameplay/application/ports/IHitSoundPort';
 import { IAudioMixerPort } from '@/features/audio/application/ports/IAudioMixerPort';
+import { logWarn } from '@/core/logging';
 
 export class HitSoundService implements IHitSoundPort {
     constructor(private mixer: IAudioMixerPort) { }
@@ -25,7 +26,7 @@ export class HitSoundService implements IHitSoundPort {
                 await Tone.start();
             }
         } catch (error) {
-            console.warn("Could not start Tone.js audio context automatically.", error);
+            logWarn('audio.context.start.failed', { service: 'HitSoundService' }, error);
         }
 
         this.compressor = new Tone.Compressor({

@@ -1,6 +1,7 @@
 import { BeatAnalysis } from '@/features/analysis/domain/types';
 import { OnsetAnalysisStrategy } from '@/features/analysis/domain/OnsetAnalysisStrategy';
 import { ConfidenceCalculator } from '@/features/analysis/domain/ConfidenceCalculator';
+import { logInfo, logError } from '@/core/logging';
 import {
     buildOnsetEnvelope,
     trackBeats,
@@ -13,8 +14,15 @@ export class BeatAnalysisService {
     public async analyze(audioBuffer: AudioBuffer, onProgress: (stage: string, percent: number) => void): Promise<BeatAnalysis> {
         onProgress('Initializing analysis...', 10);
 
+        const t0 = performance.now();
+
         try {
             onProgress('Extracting rhythm (Essentia DSP Worker)...', 20);
+            logInfo('analysis.worker.started', {
+                numberOfChannels: audioBuffer.numberOfChannels,
+                sampleRate: audioBuffer.sampleRate,
+                duration: audioBuffer.duration,
+            });
 
             // Transfer to worker
             const worker = new Worker(new URL('./beatAnalysis.worker.ts', import.meta.url), { type: 'module' });
@@ -27,7 +35,7 @@ export class BeatAnalysisService {
                 transferables.push(data.buffer);
             }
 
-            const { beatTimes, bpm, success, error } = await new Promise<any>((resolve, reject) => {
+            const workerPromise = new Promise<any>((resolve, reject) => {
                 worker.onmessage = (e) => resolve(e.data);
                 worker.onerror = (e) => reject(e);
                 worker.postMessage({
@@ -37,11 +45,27 @@ export class BeatAnalysisService {
                 }, transferables);
             });
 
+            const timeoutPromise = new Promise<never>((_, reject) =>
+                setTimeout(() => reject(new Error('Beat analysis timed out after 30s')), 30_000)
+            );
+
+            const { beatTimes, bpm, success, error } = await Promise.race([workerPromise, timeoutPromise]);
+
             worker.terminate();
+            logInfo('resource.worker.terminated', { workerName: 'beatAnalysis' });
 
             if (!success) {
+                logError('analysis.worker.failed', { reason: error });
                 throw new Error("Essentia worker failed: " + error);
             }
+            if (!bpm || bpm <= 0) {
+                logError('analysis.worker.failed', { reason: `Invalid BPM: ${bpm}` });
+                throw new Error(`Invalid BPM from analysis: ${bpm}. Cannot generate beat map.`);
+            }
+
+            const durationMs = Math.round(performance.now() - t0);
+            logInfo('analysis.worker.succeeded', { bpm, beatCount: beatTimes.length, durationMs });
+            logInfo('perf.analysis.duration', { ms: durationMs });
 
             onProgress('Generating beat map...', 60);
 
@@ -103,6 +127,7 @@ export class BeatAnalysisService {
                 beatStrengths: strategyResult.beatStrengths
             };
         } catch (error: any) {
+            logError('analysis.failed', { message: error.message }, error);
             throw new Error('Analysis failed: ' + error.message);
         }
     }

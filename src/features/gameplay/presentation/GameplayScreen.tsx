@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { logInfo, logError } from '@/core/logging';
 import { Layout } from '@/core/ui/Layout';
 import { usePixiApp } from '@/core/lib/usePixiApp';
 import { useGameEngine } from './useGameEngine';
@@ -58,24 +59,43 @@ export function GameplayScreen() {
         if (phase === 'countdown') {
             setCountdown(3);
 
-            // Audio unlock fallback check
-            if (Tone.context.state !== 'running') {
-                setNeedsAudioUnlock(true);
-            }
+            let rafId: number;
+            let startAudioTime = Tone.context.currentTime;
 
-            const timer3 = setTimeout(() => setCountdown(2), 700);
-            const timer2 = setTimeout(() => setCountdown(1), 1400);
-            const timer1 = setTimeout(() => setCountdown('GO!'), 2100);
-            const timerGo = setTimeout(() => {
-                setCountdown(null);
-                setPhase('playing');
-            }, 2800);
+            // Audio unlock fallback check (B-19)
+            const unlockCheck = setTimeout(() => {
+                if (Tone.context.state !== 'running') {
+                    setNeedsAudioUnlock(true);
+                }
+            }, 100);
+
+            const checkTime = () => {
+                if (Tone.context.state !== 'running' || startAudioTime === 0) {
+                    startAudioTime = Tone.context.currentTime;
+                }
+
+                const elapsed = Tone.context.currentTime - startAudioTime;
+
+                if (elapsed >= 2.8) {
+                    setCountdown(null);
+                    setPhase('playing');
+                    return;
+                } else if (elapsed >= 2.1) {
+                    setCountdown('GO!');
+                } else if (elapsed >= 1.4) {
+                    setCountdown(1);
+                } else if (elapsed >= 0.7) {
+                    setCountdown(2);
+                }
+
+                rafId = requestAnimationFrame(checkTime);
+            };
+
+            rafId = requestAnimationFrame(checkTime);
 
             return () => {
-                clearTimeout(timer3);
-                clearTimeout(timer2);
-                clearTimeout(timer1);
-                clearTimeout(timerGo);
+                cancelAnimationFrame(rafId);
+                clearTimeout(unlockCheck);
             };
         }
     }, [phase, setPhase]);
@@ -85,20 +105,20 @@ export function GameplayScreen() {
     useEffect(() => {
         if (!app || !engine) return;
 
-        console.log('Creating GameScene...');
+        logInfo('scene.gamescene.creating', {});
         try {
             // Create scene early to see visuals during countdown
             const scene = new GameScene(app, engine, mode);
             app.stage.addChild(scene);
-            console.log('GameScene created successfully');
+            logInfo('scene.gamescene.created', {});
 
             return () => {
-                console.log('Destroying GameScene');
+                logInfo('scene.gamescene.destroying', {});
                 app.stage.removeChild(scene);
                 scene.destroy(true);
             };
         } catch (error) {
-            console.error('Failed to create GameScene:', error);
+            logError('scene.gamescene.failed', {}, error);
         }
     }, [app, engine]);
 

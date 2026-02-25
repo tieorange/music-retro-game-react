@@ -54,8 +54,10 @@ function seededValue(index: number, time: number) {
 function computePercentile(values: number[], percentile: number): number {
     if (values.length === 0) return 0;
     const sorted = [...values].sort((a, b) => a - b);
-    const index = Math.floor((percentile / 100) * sorted.length);
-    return sorted[Math.min(index, sorted.length - 1)];
+    const pos = (percentile / 100) * (sorted.length - 1);
+    const lower = Math.floor(pos);
+    const upper = Math.ceil(pos);
+    return sorted[lower] + (sorted[upper] - sorted[lower]) * (pos - lower);
 }
 
 function generateNoteTimes(beats: number[], difficulty: GameDifficulty, beatStrengths?: number[]): number[] {
@@ -157,7 +159,8 @@ export function generateBeatMap(
         if (previousLane < 0) {
             nextLane = Math.floor(seed * LANE_COUNT) as Lane;
         } else if (seed < cfg.laneJumpChance) {
-            const shift = seed > 0.5 ? 1 : -1;
+            const dirSeed = seededValue(i + 1000, time);
+            const shift = dirSeed > 0.5 ? 1 : -1;
             nextLane = ((previousLane + shift + LANE_COUNT) % LANE_COUNT) as Lane;
         } else {
             nextLane = previousLane as Lane;
@@ -195,7 +198,7 @@ export function generateBeatMap(
                 // Merge if interval is good for a hold (0.2s to 0.8s) with a 40% chance
                 if (interval > 0.2 && interval <= 0.8 && seededValue(note.lane, note.time) < 0.4) {
                     last.type = 'hold';
-                    last.duration = interval - 0.1; // Release slightly before next beat
+                    last.duration = Math.max(0.05, interval - 0.1); // Release slightly before next beat
                     laneLastNote[note.lane] = undefined; // Prevent merging 3 notes
                     continue;
                 }

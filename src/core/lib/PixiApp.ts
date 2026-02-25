@@ -1,6 +1,6 @@
 import { Application } from 'pixi.js';
 
-export async function createPixiApp(canvas: HTMLCanvasElement): Promise<Application> {
+export async function createPixiApp(canvas: HTMLCanvasElement): Promise<{ app: Application; cleanup: () => void }> {
     const app = new Application();
 
     const isMobile = typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0;
@@ -32,5 +32,5 @@ export async function createPixiApp(canvas: HTMLCanvasElement): Promise<Applicat
     window.addEventListener('resize', resize);
     resize();
 
-    return app;
+    return { app, cleanup: () => window.removeEventListener('resize', resize) };
 }

@@ -6,7 +6,7 @@ import { INoteSchedulerPort } from '@/features/gameplay/application/ports/INoteS
 export class NoteScheduler implements INoteSchedulerPort {
     private events: number[] = [];
 
-    public scheduleAll(notes: Note[], onSpawn: (note: Note) => void): void {
+    public scheduleAll(notes: Note[], onSpawn: (note: Note, initialProgress?: number) => void): void {
         this.clear(); // Ensure clean state
 
         notes.forEach((note) => {
@@ -20,8 +20,9 @@ export class NoteScheduler implements INoteSchedulerPort {
 
             if (spawnTime < 0) {
                 // Spawn immediately when Transport starts, with pre-computed progress
+                const initialProgress = Math.min(1, -spawnTime / NOTE_FALL_DURATION);
                 const eventId = Tone.getTransport().schedule((audioTime) => {
-                    Tone.Draw.schedule(() => onSpawn(note), audioTime);
+                    Tone.Draw.schedule(() => onSpawn(note, initialProgress), audioTime);
                 }, 0);
                 this.events.push(eventId);
             } else {

@@ -109,6 +109,13 @@ export class NoteRenderer extends Container {
                 }
                 vNote.setup(color);
                 vNote.x = this.laneXPositions[note.lane];
+
+                // Fast-forward lifetime for notes that spawned early
+                if (note.initialProgress) {
+                    vNote.lifeTime = note.initialProgress * NOTE_FALL_DURATION;
+                    vNote.scale.set(1); // skip pop-in
+                }
+
                 this.addChild(vNote);
                 this.activeSprites.set(note.id, vNote);
             }

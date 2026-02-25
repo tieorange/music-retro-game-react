@@ -72,8 +72,6 @@ export class AudioPlaybackService {
     public destroy(): void {
         this.isDestroyed = true;
         this.stop();
-        Tone.getTransport().cancel();
-        Tone.getTransport().position = 0;
         if (this.player) {
             this.player.dispose();
             this.player = null;

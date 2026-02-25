@@ -14,6 +14,14 @@ export function validateAudioFile(file: File): void {
         throw new AudioValidationError('FORMAT_UNSUPPORTED', 'Unsupported audio format');
 }
 
+let sharedCtx: AudioContext | null = null;
+function getAudioContext(): AudioContext {
+    if (!sharedCtx || sharedCtx.state === 'closed') {
+        sharedCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    }
+    return sharedCtx;
+}
+
 export async function decodeAudioFile(file: File): Promise<AudioBuffer> {
     validateAudioFile(file);
     const fileReader = new FileReader();
@@ -27,17 +35,14 @@ export async function decodeAudioFile(file: File): Promise<AudioBuffer> {
             }
 
             try {
-                // Create an AudioContext just for decoding, then close it
-                const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+                // Create a shared AudioContext just for decoding
+                const audioContext = getAudioContext();
 
                 try {
                     const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
                     resolve(audioBuffer);
-                } finally {
-                    // Wait for state to be closed to free memory if possible, though GC will get it
-                    if (audioContext.state !== 'closed') {
-                        audioContext.close().catch(console.error);
-                    }
+                } catch (err) {
+                    reject(new Error("Failed to decode audio data. Unsupported format?"));
                 }
             } catch (err) {
                 reject(new Error("Failed to decode audio data. Unsupported format?"));

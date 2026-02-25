@@ -5,8 +5,10 @@ export interface ActiveNote extends Note {
     isHit: boolean;
     isMissed: boolean;
     spawnTime: number;
+    initialProgress?: number;
     isHeld?: boolean;
-    lastTickTime?: number;
+    holdStartTime?: number;
+    lastTickIndex?: number;
 }
 
 export class NoteTracker {
@@ -22,12 +24,13 @@ export class NoteTracker {
         this.onMissCallback = onMiss;
     }
 
-    public spawnNote(note: Note): void {
+    public spawnNote(note: Note, initialProgress?: number): void {
         this.active.set(note.id, {
             ...note,
             isHit: false,
             isMissed: false,
             spawnTime: note.time - NOTE_FALL_DURATION,
+            initialProgress
         });
     }
 
@@ -36,16 +39,18 @@ export class NoteTracker {
 
         for (const [id, activeNote] of this.active.entries()) {
             if (activeNote.isHeld) {
-                if (!activeNote.lastTickTime) activeNote.lastTickTime = activeNote.time;
+                if (activeNote.holdStartTime === undefined) continue;
 
                 const endTime = activeNote.time + (activeNote.duration || 0);
                 if (currentTime >= endTime) {
                     activeNote.isHit = true;
                     this.active.delete(id);
                 } else {
-                    while (currentTime - activeNote.lastTickTime >= 0.1) {
-                        holdTicks++;
-                        activeNote.lastTickTime += 0.1;
+                    const ticksSoFar = Math.floor((currentTime - activeNote.holdStartTime) / 0.1);
+                    const newTicks = ticksSoFar - (activeNote.lastTickIndex || 0);
+                    if (newTicks > 0) {
+                        holdTicks += newTicks;
+                        activeNote.lastTickIndex = ticksSoFar;
                     }
                 }
             } else if (!activeNote.isHit && !activeNote.isMissed) {
@@ -89,7 +94,8 @@ export class NoteTracker {
 
             if (closestNote.type === 'hold') {
                 closestNote.isHeld = true;
-                closestNote.lastTickTime = time;
+                closestNote.holdStartTime = time;
+                closestNote.lastTickIndex = 0;
             } else {
                 closestNote.isHit = true;
                 this.active.delete(closestNote.id);

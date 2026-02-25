@@ -1,5 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
+import { nanoid } from 'nanoid';
 import { useGameStore } from '@/state/gameStore';
+import { logInfo, logError, setFlowId, setAnalysisSnapshot } from '@/core/logging';
 import { BeatAnalysisService } from '@/features/analysis/data/beatAnalysisService';
 import { generateBeatMap } from '../domain/beatMapGenerator';
 
@@ -19,6 +21,7 @@ export function useBeatAnalysis() {
     useEffect(() => {
         if (!song || hasStarted.current) return;
         hasStarted.current = true;
+        let cancelled = false;
 
         const analysisService = new BeatAnalysisService();
 
@@ -27,19 +30,42 @@ export function useBeatAnalysis() {
             return;
         }
 
+        setFlowId(nanoid());
+        logInfo('analysis.started', {
+            duration: song.audioBuffer.duration,
+            sampleRate: song.audioBuffer.sampleRate,
+            numberOfChannels: song.audioBuffer.numberOfChannels,
+        });
+
         analysisService.analyze(song.audioBuffer, (stage, percent) => {
-            setProgressStage(stage);
-            setProgressPercent(percent);
+            if (!cancelled) { setProgressStage(stage); setProgressPercent(percent); }
         })
             .then((analysis) => {
-                console.log('Analysis complete:', analysis);
-                const beatMap = generateBeatMap(song.id, analysis, mode, difficulty);
-                setBeatMap(beatMap);
-                setPhase('ready');
+                if (!cancelled) {
+                    logInfo('analysis.beatmap.generated', {
+                        bpm: analysis.bpm,
+                        beatCount: analysis.beats.length,
+                        confidence: analysis.confidence,
+                        mode,
+                        difficulty,
+                    });
+                    setAnalysisSnapshot({ bpm: analysis.bpm, beatCount: analysis.beats.length });
+                    const beatMap = generateBeatMap(song.id, analysis, mode, difficulty);
+                    setBeatMap(beatMap);
+                    setPhase('ready');
+                }
             })
             .catch((err) => {
-                setError(err.message);
+                if (!cancelled) {
+                    logError('analysis.failed', {}, err);
+                    setError(err.message);
+                }
             });
+
+        return () => {
+            cancelled = true;
+            hasStarted.current = false;
+        };
     }, [song, mode, difficulty, setBeatMap, setPhase]);
 
     return { progressPercent, progressStage, error };

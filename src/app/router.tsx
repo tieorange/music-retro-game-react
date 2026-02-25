@@ -1,4 +1,5 @@
 import { useGameStore } from '@/state/gameStore'
+import { logInfo, logWarn, copyDebugLogs } from '@/core/logging'
 import { SongUploadScreen } from '@/features/song-upload/presentation/SongUploadScreen'
 import { AnalyzingScreen } from '@/features/analysis/presentation/AnalyzingScreen'
 import { GameplayScreen } from '@/features/gameplay/presentation/GameplayScreen'
@@ -15,6 +16,7 @@ export function AppRouter() {
 
     const handlePlayNow = async () => {
         if (Tone.context.state !== 'running') {
+            logInfo('audio.context.start.attempt', { contextState: Tone.context.state })
             try {
                 // Race Tone.start() against a timeout
                 await Promise.race([
@@ -22,9 +24,10 @@ export function AppRouter() {
                     new Promise((_, reject) => setTimeout(() => reject(new Error('Audio context start timeout')), 500))
                 ]);
             } catch (error) {
-                console.warn('Audio context start issue (continuing anyway):', error);
+                logWarn('audio.context.start.failed', { reason: 'timeout or user gesture required' }, error)
             }
         }
+        logInfo('app.phase.changed', { from: 'ready', to: 'countdown' })
         setPhase('countdown')
     }
 
@@ -46,6 +49,27 @@ export function AppRouter() {
                             PLAY NOW
                         </Button>
                     </div>
+                    {import.meta.env.DEV && (
+                        <button
+                            onClick={() => { void copyDebugLogs() }}
+                            style={{
+                                position: 'fixed',
+                                bottom: 12,
+                                right: 12,
+                                zIndex: 9999,
+                                background: '#00ffff',
+                                color: '#000',
+                                border: 'none',
+                                padding: '6px 12px',
+                                fontSize: 11,
+                                cursor: 'pointer',
+                                fontFamily: 'monospace',
+                                opacity: 0.8,
+                            }}
+                        >
+                            Copy Logs
+                        </button>
+                    )}
                 </Layout>
             )
         case 'countdown':
