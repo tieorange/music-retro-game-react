@@ -17,6 +17,17 @@ export class HitSoundService implements IHitSoundPort {
     private compressor!: Tone.Compressor;
     private limiter!: Tone.Limiter;
     private isInitialized = false;
+    private lastPlayTime = 0;
+
+    private getSafeTime(): number {
+        const time = Tone.now();
+        if (time <= this.lastPlayTime) {
+            this.lastPlayTime += 0.001;
+        } else {
+            this.lastPlayTime = time;
+        }
+        return this.lastPlayTime;
+    }
 
     public async init() {
         if (this.isInitialized) return;
@@ -83,7 +94,7 @@ export class HitSoundService implements IHitSoundPort {
     public playHit(judgment: HitJudgment, combo: number = 0) {
         if (!this.isInitialized) return;
 
-        const time = Tone.now();
+        const time = this.getSafeTime();
 
         // Pitch shift based on combo
         const ratio = Math.min(1.5, 1 + combo * 0.002);
@@ -111,7 +122,7 @@ export class HitSoundService implements IHitSoundPort {
     public playMilestone(combo: number) {
         if (!this.isInitialized) return;
 
-        const time = Tone.now();
+        const time = this.getSafeTime();
         if (combo === 10) {
             // Ascending chime
             this.perfectSynth.triggerAttackRelease('C5', '32n', time);
@@ -130,7 +141,7 @@ export class HitSoundService implements IHitSoundPort {
 
     public playComboBreak() {
         if (!this.isInitialized) return;
-        const time = Tone.now();
+        const time = this.getSafeTime();
         this.breakSynth.triggerAttackRelease('G2', '8n', time);
         this.breakSynth.triggerAttackRelease('C2', '4n', time + 0.15);
     }

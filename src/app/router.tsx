@@ -71,27 +71,26 @@ export function AppRouter() {
     return (
         <>
             {screen}
-            {import.meta.env.DEV && (
-                <button
-                    onClick={() => { void copyDebugLogs() }}
-                    style={{
-                        position: 'fixed',
-                        bottom: 12,
-                        right: 12,
-                        zIndex: 9999,
-                        background: '#00ffff',
-                        color: '#000',
-                        border: 'none',
-                        padding: '6px 12px',
-                        fontSize: 11,
-                        cursor: 'pointer',
-                        fontFamily: 'monospace',
-                        opacity: 0.8,
-                    }}
-                >
-                    Copy Logs
-                </button>
-            )}
+            <button
+                onClick={() => { void copyDebugLogs() }}
+                style={{
+                    position: 'fixed',
+                    bottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)',
+                    right: 'calc(env(safe-area-inset-right, 0px) + 16px)',
+                    zIndex: 9999,
+                    background: '#00ffff',
+                    color: '#000',
+                    border: '2px solid #000',
+                    padding: '8px 14px',
+                    fontSize: 12,
+                    cursor: 'pointer',
+                    fontFamily: 'monospace',
+                    fontWeight: 'bold',
+                    borderRadius: 4,
+                }}
+            >
+                Copy Logs
+            </button>
         </>
     )
 }

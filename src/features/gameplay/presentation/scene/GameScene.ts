@@ -7,7 +7,7 @@ import { HitZoneRenderer } from './HitZoneRenderer';
 import { BackgroundRenderer } from './BackgroundRenderer';
 import { HUDRenderer } from './HUDRenderer';
 import { HitFeedbackRenderer } from './HitFeedbackRenderer';
-import { LANE_COUNT, HIT_ZONE_Y_RATIO, LANE_AREA_WIDTH_RATIO, TRACKPAD_LANE_AREA_RATIO } from '@/features/gameplay/domain/constants';
+import { LANE_COUNT, HIT_ZONE_Y_RATIO, LANE_AREA_WIDTH_RATIO, TRACKPAD_LANE_AREA_RATIO, PORTRAIT_LANE_AREA_RATIO, PORTRAIT_TRACKPAD_LANE_AREA_RATIO } from '@/features/gameplay/domain/constants';
 import { EffectsController } from './EffectsController';
 import { GameEventListener } from './GameEventListener';
 
@@ -30,11 +30,17 @@ export class GameScene extends Container {
 
         const width = app.screen.width;
         const height = app.screen.height;
+        const isPortrait = height > width;
 
         const laneCount = mode === 'trackpad' ? 1 : LANE_COUNT;
 
-        // Use center 50% for lanes in classic, narrower area in trackpad mode
-        const laneAreaWidth = width * (mode === 'trackpad' ? TRACKPAD_LANE_AREA_RATIO : LANE_AREA_WIDTH_RATIO);
+        // Use wider area for lanes in portrait mode to ensure they are tappable
+        let laneAreaRatio = mode === 'trackpad' ? TRACKPAD_LANE_AREA_RATIO : LANE_AREA_WIDTH_RATIO;
+        if (isPortrait) {
+            laneAreaRatio = mode === 'trackpad' ? PORTRAIT_TRACKPAD_LANE_AREA_RATIO : PORTRAIT_LANE_AREA_RATIO;
+        }
+
+        const laneAreaWidth = width * laneAreaRatio;
         const leftMargin = (width - laneAreaWidth) / 2;
 
         this.bg = new BackgroundRenderer(width, height);
@@ -57,7 +63,8 @@ export class GameScene extends Container {
             laneXPositions.push(leftMargin + i * lw + lw / 2);
         }
 
-        this.notes = new NoteRenderer(laneXPositions, hitZoneY, -50);
+        const noteWidth = Math.min(lw * 0.8, 80);
+        this.notes = new NoteRenderer(laneXPositions, hitZoneY, -50, noteWidth);
         this.notes.init();
 
         this.addChild(this.notes);
@@ -113,7 +120,7 @@ export class GameScene extends Container {
 
     public destroy(options?: any) {
         this.listener.destroy();
-        this.app.ticker.remove(this.update, this);
+        this.app.ticker?.remove(this.update, this);
         super.destroy(options);
     }
 }

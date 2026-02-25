@@ -55,12 +55,12 @@ export function ResultsScreen() {
     return (
         <Layout>
             <motion.div
-                className="flex flex-col items-center justify-center space-y-8 w-full max-w-4xl"
+                className="flex flex-col items-center justify-center space-y-5 sm:space-y-8 w-full max-w-4xl py-4"
                 initial={{ opacity: 0, y: 50 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, ease: "easeOut" }}
             >
-                <h1 className="text-5xl md:text-7xl font-bold text-transparent bg-clip-text bg-gradient-to-br from-neon-cyan to-neon-magenta drop-shadow-[0_0_20px_rgba(255,0,255,0.6)]">
+                <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold text-transparent bg-clip-text bg-gradient-to-br from-neon-cyan to-neon-magenta drop-shadow-[0_0_20px_rgba(255,0,255,0.6)]">
                     STAGE CLEAR
                 </h1>
 
@@ -68,12 +68,12 @@ export function ResultsScreen() {
 
                     {/* Huge Grade Display */}
                     <motion.div
-                        className="absolute -top-16 -right-8 w-32 h-32 md:w-48 md:h-48 flex items-center justify-center rounded-full border-4 border-neon-yellow shadow-[0_0_40px_rgba(255,255,0,0.5)] rotate-12 bg-slate-950/90 z-10"
+                        className="absolute -top-14 right-2 sm:-top-16 sm:-right-8 w-28 h-28 sm:w-32 sm:h-32 md:w-48 md:h-48 flex items-center justify-center rounded-full border-4 border-neon-yellow shadow-[0_0_40px_rgba(255,255,0,0.5)] rotate-12 bg-slate-950/90 z-10"
                         initial={{ scale: 5, opacity: 0, rotate: -45 }}
                         animate={{ scale: 1, opacity: 1, rotate: 12 }}
                         transition={{ delay: 1.5, type: "spring", stiffness: 300, damping: 15 }}
                     >
-                        <span className={`text-6xl md:text-9xl font-black ${finalScore.grade === 'S' ? 'text-neon-yellow drop-shadow-[0_0_20px_rgba(255,255,0,1)]' :
+                        <span className={`text-5xl sm:text-6xl md:text-9xl font-black ${finalScore.grade === 'S' ? 'text-neon-yellow drop-shadow-[0_0_20px_rgba(255,255,0,1)]' :
                             finalScore.grade === 'A' ? 'text-neon-green drop-shadow-[0_0_20px_rgba(0,255,0,1)]' :
                                 finalScore.grade === 'B' ? 'text-neon-cyan drop-shadow-[0_0_20px_rgba(0,255,255,1)]' :
                                     'text-red-500 drop-shadow-[0_0_20px_rgba(255,0,0,1)]'

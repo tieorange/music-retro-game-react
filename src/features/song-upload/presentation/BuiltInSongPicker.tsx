@@ -1,5 +1,6 @@
+import { useEffect, useState } from 'react';
 import { Music2 } from 'lucide-react';
-import { BUILT_IN_SONGS, type BuiltInSong } from '../data/builtInSongs';
+import { fetchBuiltInSongs, type BuiltInSong } from '../data/builtInSongs';
 
 interface Props {
     selected: BuiltInSong | null;
@@ -7,7 +8,13 @@ interface Props {
 }
 
 export function BuiltInSongPicker({ selected, onSelect }: Props) {
-    if (BUILT_IN_SONGS.length === 0) return null;
+    const [songs, setSongs] = useState<BuiltInSong[]>([]);
+
+    useEffect(() => {
+        fetchBuiltInSongs().then(setSongs);
+    }, []);
+
+    if (songs.length === 0) return null;
 
     return (
         <div className="w-full relative z-10">
@@ -18,7 +25,7 @@ export function BuiltInSongPicker({ selected, onSelect }: Props) {
             </div>
 
             <div className="flex flex-col gap-2">
-                {BUILT_IN_SONGS.map((song) => {
+                {songs.map((song) => {
                     const isSelected = selected?.url === song.url;
                     return (
                         <button

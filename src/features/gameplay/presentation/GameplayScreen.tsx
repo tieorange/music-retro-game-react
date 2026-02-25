@@ -8,7 +8,7 @@ import { useInputManager } from './useInputManager';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '@/state/gameStore';
 import * as Tone from 'tone';
-import { RotateCcw, Pause, Play, RefreshCw, LogOut } from 'lucide-react';
+import { Pause, Play, RefreshCw, LogOut } from 'lucide-react';
 
 export function GameplayScreen() {
     const { containerRef, app } = usePixiApp();
@@ -18,7 +18,6 @@ export function GameplayScreen() {
 
     const [countdown, setCountdown] = useState<number | 'GO!' | null>(null);
     const [needsAudioUnlock, setNeedsAudioUnlock] = useState(false);
-    const [isPortrait, setIsPortrait] = useState(false);
 
     useInputManager(engine);
 
@@ -34,26 +33,6 @@ export function GameplayScreen() {
             }
         }
     }, [phase]);
-
-    useEffect(() => {
-        const checkOrientation = () => {
-            // Some mobile browsers return innerHeight > innerWidth for portrait
-            // We only care if playing on mobile
-            if (window.innerWidth < 1024) {
-                setIsPortrait(window.innerHeight > window.innerWidth);
-            } else {
-                setIsPortrait(false);
-            }
-        };
-
-        checkOrientation();
-        window.addEventListener('resize', checkOrientation);
-        window.addEventListener('orientationchange', checkOrientation);
-        return () => {
-            window.removeEventListener('resize', checkOrientation);
-            window.removeEventListener('orientationchange', checkOrientation);
-        };
-    }, []);
 
     useEffect(() => {
         if (phase === 'countdown') {
@@ -114,7 +93,7 @@ export function GameplayScreen() {
 
             return () => {
                 logInfo('scene.gamescene.destroying', {});
-                app.stage.removeChild(scene);
+                app.stage?.removeChild(scene);
                 scene.destroy(true);
             };
         } catch (error) {
@@ -161,19 +140,23 @@ export function GameplayScreen() {
     if (countdown === 'GO!') colorClass = 'text-neon-cyan drop-shadow-[0_0_30px_rgba(0,255,255,0.8)]';
 
     return (
-        <Layout>
-            <div className="relative w-full h-full flex items-center justify-center">
+        <Layout fullscreen>
+            <div className="relative w-full h-full flex items-center justify-center" style={{ touchAction: 'none' }}>
                 {/* The PIXI Canvas */}
                 <div ref={containerRef} className="absolute inset-0 w-full h-full rounded-md overflow-hidden bg-black shadow-[0_0_30px_rgba(0,255,255,0.2)]" />
 
-                {/* Pause Button in Top Right */}
+                {/* Pause Button in Top Right — safe-area aware */}
                 <AnimatePresence>
                     {phase === 'playing' && (
                         <motion.button
                             initial={{ opacity: 0, y: -20 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -20 }}
-                            className="absolute top-4 right-4 z-40 p-3 bg-black/50 border border-neon-cyan/50 rounded-full text-neon-cyan hover:bg-neon-cyan/20 hover:scale-110 hover:shadow-[0_0_15px_rgba(0,255,255,0.6)] transition-all cursor-pointer backdrop-blur-md"
+                            className="absolute z-40 p-3 bg-black/50 border border-neon-cyan/50 rounded-full text-neon-cyan hover:bg-neon-cyan/20 hover:scale-110 hover:shadow-[0_0_15px_rgba(0,255,255,0.6)] transition-all cursor-pointer backdrop-blur-md"
+                            style={{
+                                top: 'calc(env(safe-area-inset-top, 0px) + 1rem)',
+                                right: 'calc(env(safe-area-inset-right, 0px) + 1rem)',
+                            }}
                             onClick={handlePause}
                         >
                             <Pause className="w-6 h-6" />
@@ -255,20 +238,6 @@ export function GameplayScreen() {
                                     <LogOut className="w-5 h-5" /> QUIT
                                 </button>
                             </div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-
-                {/* Portrait Overlay */}
-                <AnimatePresence>
-                    {isPortrait && (
-                        <motion.div
-                            className="absolute inset-0 z-[70] bg-black flex flex-col items-center justify-center space-y-4 p-6 text-center"
-                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                        >
-                            <RotateCcw className="w-16 h-16 text-neon-cyan animate-spin-slow" />
-                            <h2 className="text-2xl font-bold text-white">Rotate Device</h2>
-                            <p className="text-gray-400">PixelBeat is best played in landscape mode.</p>
                         </motion.div>
                     )}
                 </AnimatePresence>

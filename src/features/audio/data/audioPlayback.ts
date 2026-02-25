@@ -49,7 +49,11 @@ export class AudioPlaybackService {
         Tone.getTransport().stop();
         // Also stop the player explicitly just in case
         if (this.player) {
-            this.player.stop();
+            try {
+                this.player.stop();
+            } catch (error) {
+                console.warn('[AudioPlaybackService] Ignored error during player stop:', error);
+            }
         }
     }
 

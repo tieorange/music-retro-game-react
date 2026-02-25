@@ -86,20 +86,20 @@ export function SongUploadScreen() {
             `}</style>
 
             <motion.div
-                className="flex flex-col items-center justify-center space-y-8 max-w-2xl w-full"
+                className="flex flex-col items-center justify-center space-y-4 sm:space-y-6 max-w-2xl w-full py-4"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5 }}
             >
-                <div className="text-center space-y-4 relative z-10">
+                <div className="text-center space-y-2 relative z-10">
                     <motion.h1
-                        className="text-5xl md:text-7xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-neon-cyan via-white to-neon-magenta drop-shadow-[0_0_20px_rgba(255,0,255,0.8)] leading-tight"
+                        className="text-4xl sm:text-5xl md:text-7xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-neon-cyan via-white to-neon-magenta drop-shadow-[0_0_20px_rgba(255,0,255,0.8)] leading-tight"
                         animate={{ opacity: [1, 0.8, 1, 0.5, 1] }}
                         transition={{ repeat: Infinity, duration: 4, times: [0, 0.1, 0.2, 0.3, 1] }}
                     >
                         PIXELBEAT
                     </motion.h1>
-                    <p className="text-xl text-slate-300">Synthwave Rhythm Action</p>
+                    <p className="text-sm sm:text-xl text-slate-300">Synthwave Rhythm Action</p>
                 </div>
 
                 <DropZone onFileAccepted={handleFileAccepted} />
@@ -174,7 +174,7 @@ export function SongUploadScreen() {
 
                 {hasSelection && !error && (
                     <motion.div
-                        className="flex flex-col items-center space-y-6 w-full"
+                        className="flex flex-col items-center space-y-6 w-full pb-8 sm:pb-0"
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: 'auto' }}
                     >

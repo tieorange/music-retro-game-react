@@ -55,7 +55,7 @@ export function DropZone({ onFileAccepted }: DropZoneProps) {
 
     return (
         <motion.div
-            className={`relative w-full max-w-xl p-12 mt-8 text-center border-4 border-dashed cursor-pointer bg-slate-900/50 backdrop-blur-sm transition-colors duration-300 ${isDragActive ? 'border-neon-cyan shadow-[0_0_30px_rgba(0,255,255,0.3)]' : 'border-slate-700 hover:border-neon-magenta hover:shadow-[0_0_20px_rgba(255,0,255,0.2)]'}`}
+            className={`relative w-full max-w-xl p-6 sm:p-12 text-center border-4 border-dashed cursor-pointer bg-slate-900/50 backdrop-blur-sm transition-colors duration-300 ${isDragActive ? 'border-neon-cyan shadow-[0_0_30px_rgba(0,255,255,0.3)]' : 'border-slate-700 hover:border-neon-magenta hover:shadow-[0_0_20px_rgba(255,0,255,0.2)]'}`}
             onClick={handleClick}
             onDragEnter={handleDragEnter}
             onDragLeave={handleDragLeave}
@@ -79,12 +79,12 @@ export function DropZone({ onFileAccepted }: DropZoneProps) {
                     animate={{ y: isDragActive ? -10 : 0 }}
                     transition={{ type: "spring", stiffness: 300, damping: 20 }}
                 >
-                    <FileAudio size={64} className={isDragActive ? "text-neon-cyan" : "text-slate-400"} />
+                    <FileAudio size={40} className={`sm:w-16 sm:h-16 ${isDragActive ? "text-neon-cyan" : "text-slate-400"}`} />
                 </motion.div>
 
                 <div className="space-y-2 text-shadow-sm font-bold">
-                    <p className={`text-xl md:text-2xl ${isDragActive ? 'text-neon-cyan' : 'text-white'}`}>
-                        DROP YOUR TRACK HERE
+                    <p className={`text-base sm:text-xl md:text-2xl ${isDragActive ? 'text-neon-cyan' : 'text-white'}`}>
+                        {isDragActive ? 'DROP IT!' : 'TAP TO PICK A TRACK'}
                     </p>
                     <p className="text-sm text-slate-400">
                         or click to browse files
