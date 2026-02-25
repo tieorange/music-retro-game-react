@@ -22,6 +22,18 @@ function getAudioContext(): AudioContext {
     return sharedCtx;
 }
 
+export async function decodeAudioUrl(url: string): Promise<AudioBuffer> {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`Failed to fetch audio: ${response.statusText}`);
+    const arrayBuffer = await response.arrayBuffer();
+    const audioContext = getAudioContext();
+    try {
+        return await audioContext.decodeAudioData(arrayBuffer);
+    } catch {
+        throw new Error('Failed to decode audio data. Unsupported format?');
+    }
+}
+
 export async function decodeAudioFile(file: File): Promise<AudioBuffer> {
     validateAudioFile(file);
     const fileReader = new FileReader();

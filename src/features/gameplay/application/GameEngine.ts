@@ -243,6 +243,7 @@ export class GameEngine {
     }
 
     public destroy(): void {
+        logInfo('game.engine.destroy', { score: this._score, activeNotes: this.tracker.getActiveNotes().length });
         this._isRunning = false;
         this.scheduler.clear();
         this.playback.destroy();

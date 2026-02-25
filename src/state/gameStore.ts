@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { logInfo } from '@/core/logging';
 import { GameState, GamePhase, HitResult, GameMode, GameDifficulty } from '@/features/gameplay/domain/types';
 import { Song } from '@/features/audio/domain/types';
 import { BeatMap } from '@/features/analysis/domain/types';
@@ -27,8 +28,8 @@ export type GameStore = GameState & GameActions;
 
 const initialState: GameState = {
     phase: 'idle',
-    mode: 'classic',
-    difficulty: 'normal',
+    mode: 'trackpad',
+    difficulty: 'easy',
     song: null,
     beatMap: null,
     currentTime: 0,
@@ -48,13 +49,28 @@ export const useGameStore = create<GameStore>()(
         (set) => ({
             ...initialState,
 
-            setPhase: (phase) => set({ phase }),
-            setMode: (mode) => set({ mode }),
-            setDifficulty: (difficulty) => set({ difficulty }),
+            setPhase: (phase) => {
+                logInfo('app.phase.changed', { to: phase, from: useGameStore.getState().phase });
+                set({ phase });
+            },
+            setMode: (mode) => {
+                logInfo('app.mode.changed', { mode });
+                set({ mode });
+            },
+            setDifficulty: (difficulty) => {
+                logInfo('app.difficulty.changed', { difficulty });
+                set({ difficulty });
+            },
 
-            setSong: (song) => set({ song }),
+            setSong: (song) => {
+                logInfo('app.song.selected', { songId: song.id, title: song.name });
+                set({ song });
+            },
 
-            setBeatMap: (beatMap) => set({ beatMap }),
+            setBeatMap: (beatMap) => {
+                logInfo('app.beatmap.set', { bpm: beatMap.bpm, noteCount: beatMap.notes.length });
+                set({ beatMap });
+            },
 
             setCurrentTime: (currentTime) => set({ currentTime }),
 
@@ -68,23 +84,29 @@ export const useGameStore = create<GameStore>()(
 
             setHighScores: (highScores) => set({ highScores }),
 
-            clearAudioBuffer: () => set((state) => ({
-                song: state.song ? { ...state.song, audioBuffer: null } : null,
-            })),
+            clearAudioBuffer: () => {
+                logInfo('app.audiobuffer.cleared', {});
+                set((state) => ({
+                    song: state.song ? { ...state.song, audioBuffer: null } : null,
+                }));
+            },
 
             setMusicVolume: (musicVolume) => set({ musicVolume }),
             setSfxVolume: (sfxVolume) => set({ sfxVolume }),
             setMasterVolume: (masterVolume) => set({ masterVolume }),
 
-            reset: () => set((state) => ({
-                ...initialState,
-                mode: state.mode, // Preserve settings
-                difficulty: state.difficulty,
-                musicVolume: state.musicVolume,
-                sfxVolume: state.sfxVolume,
-                masterVolume: state.masterVolume,
-                highScores: state.highScores, // Preserve high scores
-            })),
+            reset: () => {
+                logInfo('app.state.reset', {});
+                set((state) => ({
+                    ...initialState,
+                    mode: state.mode, // Preserve settings
+                    difficulty: state.difficulty,
+                    musicVolume: state.musicVolume,
+                    sfxVolume: state.sfxVolume,
+                    masterVolume: state.masterVolume,
+                    highScores: state.highScores, // Preserve high scores
+                }));
+            },
         }),
         {
             name: 'pixelbeat-storage',

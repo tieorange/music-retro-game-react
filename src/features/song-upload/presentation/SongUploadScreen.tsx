@@ -4,6 +4,8 @@ import { Play } from 'lucide-react';
 import { useGameStore } from '@/state/gameStore';
 import { useAudioDecoder } from '@/features/audio/presentation/useAudioDecoder';
 import { DropZone } from './DropZone';
+import { BuiltInSongPicker } from './BuiltInSongPicker';
+import { type BuiltInSong } from '../data/builtInSongs';
 import { Button } from '@/core/ui/button';
 import { Layout } from '@/core/ui/Layout';
 import { nanoid } from 'nanoid';
@@ -15,29 +17,54 @@ export function SongUploadScreen() {
     const setMode = useGameStore((state) => state.setMode);
     const difficulty = useGameStore((state) => state.difficulty);
     const setDifficulty = useGameStore((state) => state.setDifficulty);
-    const { isDecoding, error, decode } = useAudioDecoder();
+    const { isDecoding, error, decode, decodeUrl } = useAudioDecoder();
+
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [selectedBuiltIn, setSelectedBuiltIn] = useState<BuiltInSong | null>(null);
 
     const handleFileAccepted = (file: File) => {
         setSelectedFile(file);
+        setSelectedBuiltIn(null);
+    };
+
+    const handleBuiltInSelected = (song: BuiltInSong) => {
+        setSelectedBuiltIn(song);
+        setSelectedFile(null);
     };
 
     const handleProceed = async () => {
-        if (!selectedFile) return;
+        if (selectedBuiltIn) {
+            const audioBuffer = await decodeUrl(selectedBuiltIn.url, selectedBuiltIn.name);
+            if (audioBuffer) {
+                setSong({
+                    id: nanoid(),
+                    name: selectedBuiltIn.name,
+                    file: new File([], selectedBuiltIn.name),
+                    audioBuffer,
+                    duration: audioBuffer.duration,
+                });
+                setPhase('analyzing');
+            }
+            return;
+        }
 
-        const audioBuffer = await decode(selectedFile);
-
-        if (audioBuffer) {
-            setSong({
-                id: nanoid(),
-                name: selectedFile.name.replace(/\.[^/.]+$/, ""), // remove extension
-                file: selectedFile,
-                audioBuffer,
-                duration: audioBuffer.duration,
-            });
-            setPhase('analyzing');
+        if (selectedFile) {
+            const audioBuffer = await decode(selectedFile);
+            if (audioBuffer) {
+                setSong({
+                    id: nanoid(),
+                    name: selectedFile.name.replace(/\.[^/.]+$/, ''),
+                    file: selectedFile,
+                    audioBuffer,
+                    duration: audioBuffer.duration,
+                });
+                setPhase('analyzing');
+            }
         }
     };
+
+    const selectedName = selectedBuiltIn?.name ?? selectedFile?.name ?? null;
+    const hasSelection = selectedBuiltIn !== null || selectedFile !== null;
 
     return (
         <Layout>
@@ -51,7 +78,6 @@ export function SongUploadScreen() {
                     }}
                 />
             </div>
-            {/* Keyframes for grid movement */}
             <style>{`
                 @keyframes grid-move {
                     0% { background-position: 0px 0px; }
@@ -77,6 +103,8 @@ export function SongUploadScreen() {
                 </div>
 
                 <DropZone onFileAccepted={handleFileAccepted} />
+
+                <BuiltInSongPicker selected={selectedBuiltIn} onSelect={handleBuiltInSelected} />
 
                 <div className="w-full grid grid-cols-2 gap-4 relative z-10">
                     <Button
@@ -144,15 +172,15 @@ export function SongUploadScreen() {
                     </div>
                 )}
 
-                {selectedFile && !error && (
+                {hasSelection && !error && (
                     <motion.div
                         className="flex flex-col items-center space-y-6 w-full"
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: 'auto' }}
                     >
                         <div className="bg-slate-800/80 p-4 rounded-lg border border-neon-green/50 w-full text-center shadow-[0_0_15px_rgba(0,255,0,0.2)]">
-                            <p className="text-neon-green truncate" title={selectedFile.name}>
-                                {selectedFile.name}
+                            <p className="text-neon-green truncate" title={selectedName ?? ''}>
+                                {selectedName}
                             </p>
                         </div>
 

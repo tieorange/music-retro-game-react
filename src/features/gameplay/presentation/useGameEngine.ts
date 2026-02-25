@@ -12,8 +12,6 @@ import { NoteTracker } from '../domain/NoteTracker';
 
 export function useGameEngine() {
     const phase = useGameStore(s => s.phase);
-    const song = useGameStore(s => s.song);
-    const beatMap = useGameStore(s => s.beatMap);
     const musicVolume = useGameStore(s => s.musicVolume);
     const sfxVolume = useGameStore(s => s.sfxVolume);
     const masterVolume = useGameStore(s => s.masterVolume);
@@ -26,13 +24,16 @@ export function useGameEngine() {
     useEffect(() => {
         let mounted = true;
 
-        if ((phase === 'playing' || phase === 'countdown') && 
-            !engineRef.current && 
-            !initializingRef.current && 
-            song?.audioBuffer && 
-            beatMap) {
-            
+        const currentSong = useGameStore.getState().song;
+        const currentBeatMap = useGameStore.getState().beatMap;
+
+        if (!engineRef.current &&
+            !initializingRef.current &&
+            currentSong?.audioBuffer &&
+            currentBeatMap) {
+
             initializingRef.current = true;
+            logInfo('game.useengine.init.started', { songId: currentSong.id });
 
             const mixer = new AudioMixer();
             mixerRef.current = mixer;
@@ -53,10 +54,10 @@ export function useGameEngine() {
 
             const initialize = async () => {
                 try {
-                    await playback.load(song!.audioBuffer!);
+                    await playback.load(currentSong!.audioBuffer!);
                     useGameStore.getState().clearAudioBuffer();
 
-                    if (phase === 'countdown') {
+                    if (useGameStore.getState().phase === 'countdown') {
                         await playback.warmUp();
                     }
 
@@ -69,7 +70,7 @@ export function useGameEngine() {
                     await hitSounds.init();
 
                     const localEngine = new GameEngine(
-                        beatMap!,
+                        currentBeatMap!,
                         playback,
                         stateAdapter,
                         new NoteScheduler(),
@@ -94,6 +95,7 @@ export function useGameEngine() {
                     });
 
                     setEngine(localEngine);
+                    logInfo('game.useengine.init.success', {});
                 } catch (error) {
                     logError('game.engine.init.failed', {}, error);
                     playback.destroy();
@@ -107,6 +109,7 @@ export function useGameEngine() {
         }
 
         return () => {
+            logInfo('game.useengine.unmounted', { hadEngine: !!engineRef.current });
             mounted = false;
 
             if (engineRef.current) {
@@ -118,8 +121,9 @@ export function useGameEngine() {
                 mixerRef.current.destroy();
                 mixerRef.current = null;
             }
+            initializingRef.current = false;
         };
-    }, [phase, song, beatMap]);
+    }, []);
 
     useEffect(() => {
         if (phase === 'playing' && engine && !engine.isRunning) {

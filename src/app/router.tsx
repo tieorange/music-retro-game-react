@@ -1,3 +1,4 @@
+import React from 'react'
 import { useGameStore } from '@/state/gameStore'
 import { logInfo, logWarn, copyDebugLogs } from '@/core/logging'
 import { SongUploadScreen } from '@/features/song-upload/presentation/SongUploadScreen'
@@ -31,13 +32,16 @@ export function AppRouter() {
         setPhase('countdown')
     }
 
+    let screen: React.ReactNode
     switch (phase) {
         case 'idle':
-            return <SongUploadScreen />
+            screen = <SongUploadScreen />
+            break
         case 'analyzing':
-            return <AnalyzingScreen />
+            screen = <AnalyzingScreen />
+            break
         case 'ready':
-            return (
+            screen = (
                 <Layout>
                     <div className="flex flex-col items-center space-y-6">
                         <h2 className="text-4xl text-neon-green">READY</h2>
@@ -49,36 +53,45 @@ export function AppRouter() {
                             PLAY NOW
                         </Button>
                     </div>
-                    {import.meta.env.DEV && (
-                        <button
-                            onClick={() => { void copyDebugLogs() }}
-                            style={{
-                                position: 'fixed',
-                                bottom: 12,
-                                right: 12,
-                                zIndex: 9999,
-                                background: '#00ffff',
-                                color: '#000',
-                                border: 'none',
-                                padding: '6px 12px',
-                                fontSize: 11,
-                                cursor: 'pointer',
-                                fontFamily: 'monospace',
-                                opacity: 0.8,
-                            }}
-                        >
-                            Copy Logs
-                        </button>
-                    )}
                 </Layout>
             )
+            break
         case 'countdown':
         case 'playing':
         case 'paused':
-            return <GameplayScreen />
+            screen = <GameplayScreen />
+            break
         case 'results':
-            return <ResultsScreen />
+            screen = <ResultsScreen />
+            break
         default:
-            return <div>Unknown Phase</div>
+            screen = <div>Unknown Phase</div>
     }
+
+    return (
+        <>
+            {screen}
+            {import.meta.env.DEV && (
+                <button
+                    onClick={() => { void copyDebugLogs() }}
+                    style={{
+                        position: 'fixed',
+                        bottom: 12,
+                        right: 12,
+                        zIndex: 9999,
+                        background: '#00ffff',
+                        color: '#000',
+                        border: 'none',
+                        padding: '6px 12px',
+                        fontSize: 11,
+                        cursor: 'pointer',
+                        fontFamily: 'monospace',
+                        opacity: 0.8,
+                    }}
+                >
+                    Copy Logs
+                </button>
+            )}
+        </>
+    )
 }
