@@ -1,7 +1,9 @@
-import { Container, Graphics } from 'pixi.js';
+import { Container, Graphics, FillGradient } from 'pixi.js';
 
 export class BackgroundRenderer extends Container {
     private grid: Graphics;
+    private stars: Graphics;
+    private vignette: Graphics;
     private bgWidth: number;
     private bgHeight: number;
     private offsetY: number = 0;
@@ -14,8 +16,55 @@ export class BackgroundRenderer extends Container {
         this.bgWidth = width;
         this.bgHeight = height;
 
+        this.stars = new Graphics();
+        this.addChild(this.stars);
+
         this.grid = new Graphics();
         this.addChild(this.grid);
+
+        this.vignette = new Graphics();
+        this.addChild(this.vignette);
+
+        this.buildStars();
+        this.buildVignette();
+    }
+
+    private buildStars() {
+        this.stars.fill({ color: 0xffffff, alpha: 0.5 });
+        for (let i = 0; i < 150; i++) {
+            const x = Math.random() * this.bgWidth;
+            const y = Math.random() * this.bgHeight;
+            const size = Math.random() * 2 + 1;
+            this.stars.circle(x, y, size);
+            this.stars.circle(x, y - this.bgHeight, size); // Seamless clone above
+        }
+        this.stars.fill();
+    }
+
+    private buildVignette() {
+        const width = this.bgWidth;
+        const height = this.bgHeight;
+
+        // Simulate radial vignette with 4 directional gradients
+        const vGradLeft = new FillGradient(0, 0, width * 0.25, 0);
+        vGradLeft.addColorStop(0, 'rgba(0,0,0,0.85)');
+        vGradLeft.addColorStop(1, 'rgba(0,0,0,0)');
+        this.vignette.rect(0, 0, width * 0.25, height).fill(vGradLeft);
+
+        const vGradRight = new FillGradient(width, 0, width * 0.75, 0);
+        vGradRight.addColorStop(0, 'rgba(0,0,0,0.85)');
+        vGradRight.addColorStop(1, 'rgba(0,0,0,0)');
+        this.vignette.rect(width * 0.75, 0, width * 0.25, height).fill(vGradRight);
+
+        const vGradTop = new FillGradient(0, 0, 0, height * 0.2);
+        vGradTop.addColorStop(0, 'rgba(0,0,0,0.8)');
+        vGradTop.addColorStop(1, 'rgba(0,0,0,0)');
+        this.vignette.rect(0, 0, width, height * 0.2).fill(vGradTop);
+
+        const vGradBottom = new FillGradient(0, height, 0, height * 0.8);
+        vGradBottom.addColorStop(0, 'rgba(0,0,0,0.9)');
+        vGradBottom.addColorStop(1, 'rgba(0,0,0,0)');
+        this.vignette.rect(0, height * 0.8, width, height * 0.2).fill(vGradBottom);
     }
 
     public setFever(isFever: boolean) {
@@ -29,7 +78,15 @@ export class BackgroundRenderer extends Container {
     }
 
     public update(dt: number) {
+        // Grid scroll
         this.offsetY = (this.offsetY + this.speed * dt) % 40;
+
+        // Stars scroll (parallax)
+        this.stars.y += (this.speed * 0.15) * dt;
+        if (this.stars.y >= this.bgHeight) {
+            this.stars.y -= this.bgHeight;
+        }
+
         if (this.isFever) {
             this.feverHue = (this.feverHue + dt * 180) % 360;
         }

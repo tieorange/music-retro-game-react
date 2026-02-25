@@ -55,7 +55,7 @@ export class HitFeedbackRenderer extends Container {
         // Pre-allocate pools
         for (let i = 0; i < 200; i++) {
             const g = new Graphics();
-            g.rect(-3, -3, 6, 6);
+            g.rect(-6, -2, 12, 4); // Wider for motion blur streaks
             g.fill({ color: 0xffffff });
             this.particlePool.push(g);
         }
@@ -100,15 +100,18 @@ export class HitFeedbackRenderer extends Container {
         if (e.judgment === 'perfect') {
             textStr = 'PERFECT!';
             scoreVal = 300;
-            this.spawnParticles(x, y, 20, JUDGMENT_COLORS.perfect, 10, 'starburst');
+            this.spawnParticles(x, y, 40, JUDGMENT_COLORS.perfect, 18, 'starburst');
+            if (e.combo > 50) {
+                this.spawnParticles(x, y, 20, 0xffffff, 25, 'upward_spark');
+            }
         } else if (e.judgment === 'great') {
             textStr = 'GREAT';
             scoreVal = 200;
-            this.spawnParticles(x, y, 12, JUDGMENT_COLORS.great, 8, 'fountain');
+            this.spawnParticles(x, y, 25, JUDGMENT_COLORS.great, 14, 'fountain');
         } else if (e.judgment === 'good') {
             textStr = 'GOOD';
             scoreVal = 100;
-            this.spawnParticles(x, y, 8, JUDGMENT_COLORS.good, 5, 'arc');
+            this.spawnParticles(x, y, 15, JUDGMENT_COLORS.good, 10, 'arc');
         }
 
         this.spawnText(x, y - 20, textStr, style, -1.0, 1.5, 0.8, 0.1);
@@ -158,7 +161,7 @@ export class HitFeedbackRenderer extends Container {
             let g = this.particlePool.pop();
             if (!g) {
                 g = new Graphics();
-                g.rect(-3, -3, 6, 6);
+                g.rect(-6, -2, 12, 4);
                 g.fill({ color: 0xffffff });
             }
             g.tint = color;
@@ -189,6 +192,11 @@ export class HitFeedbackRenderer extends Container {
                 vx = Math.cos(downAngle) * velocity;
                 vy = Math.sin(downAngle) * velocity;
                 grav = 0.5;
+            } else if (shape === 'upward_spark') {
+                const sparkAngle = -Math.PI / 2 + (Math.random() - 0.3) * 0.5;
+                vx = Math.cos(sparkAngle) * velocity;
+                vy = Math.sin(sparkAngle) * velocity * 1.5;
+                grav = 0.6;
             }
 
             this.particles.push({
@@ -230,10 +238,16 @@ export class HitFeedbackRenderer extends Container {
 
         for (let i = this.particles.length - 1; i >= 0; i--) {
             const p = this.particles[i];
-            p.vx *= 0.95;
+            p.vx *= 0.92; // Slightly more drag
             p.vy += p.gravity;
             p.sprite.x += p.vx * deltaFrames;
             p.sprite.y += p.vy * deltaFrames;
+
+            // Motion blur rotation & scaling
+            p.sprite.rotation = Math.atan2(p.vy, p.vx);
+            const speed = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
+            p.sprite.scale.x = Math.max(0.5, speed / 5);
+            p.sprite.scale.y = Math.min(1.0, 5 / Math.max(1, speed));
 
             p.life -= 0.02 * deltaFrames;
             p.sprite.alpha = Math.max(0, p.life / p.maxLife);

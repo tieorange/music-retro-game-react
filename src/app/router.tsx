@@ -15,7 +15,15 @@ export function AppRouter() {
 
     const handlePlayNow = async () => {
         if (Tone.context.state !== 'running') {
-            await Tone.start()
+            try {
+                // Race Tone.start() against a timeout
+                await Promise.race([
+                    Tone.start(),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('Audio context start timeout')), 500))
+                ]);
+            } catch (error) {
+                console.warn('Audio context start issue (continuing anyway):', error);
+            }
         }
         setPhase('countdown')
     }

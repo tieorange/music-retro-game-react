@@ -7,7 +7,10 @@ self.onmessage = async (e: MessageEvent) => {
         const { channelData, length } = e.data;
 
         if (!essentia) {
-            essentia = new Essentia(await EssentiaWASM());
+            // Vite's CommonJS interop sometimes wraps the loaded UMD module.
+            const wasmModule = (EssentiaWASM as any).EssentiaWASM || EssentiaWASM;
+            const essentiaClass = (Essentia as any).Essentia || Essentia;
+            essentia = new essentiaClass(wasmModule);
         }
 
         // Mix to mono
@@ -25,16 +28,18 @@ self.onmessage = async (e: MessageEvent) => {
         const beats = essentia.BeatTrackerDegara(signal);
         const tempo = essentia.PercivalBpmEstimator(signal);
 
-        const beatTimes = essentia.vectorToArray(beats.ticks);
-        const bpm = tempo.bpm;
+        const beatTimes = essentia.vectorToArray(beats.ticks || beats);
+        const bpm = typeof tempo === 'object' && tempo.bpm ? tempo.bpm : tempo;
 
         // Cleanup vectors to prevent memory leaks in WASM
-        signal.delete();
-        beats.ticks.delete();
-        beats.confidence.delete();
+        if (signal && signal.delete) signal.delete();
+        if (beats.ticks && beats.ticks.delete) beats.ticks.delete();
+        else if (beats.delete) beats.delete();
+        if (beats.confidence && beats.confidence.delete) beats.confidence.delete();
+        if (tempo.ticks && tempo.ticks.delete) tempo.ticks.delete();
 
         self.postMessage({ beatTimes, bpm, success: true });
     } catch (err: any) {
-        self.postMessage({ success: false, error: err.message });
+        self.postMessage({ success: false, error: err.message + ' KEYS=' + (EssentiaWASM ? Object.keys(EssentiaWASM).join(',') : 'null') });
     }
 };

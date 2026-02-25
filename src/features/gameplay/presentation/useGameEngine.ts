@@ -19,12 +19,20 @@ export function useGameEngine() {
 
     const engineRef = useRef<GameEngine | null>(null);
     const mixerRef = useRef<AudioMixer | null>(null);
+    const initializingRef = useRef(false);
     const [engine, setEngine] = useState<GameEngine | null>(null);
 
     useEffect(() => {
         let mounted = true;
 
-        if ((phase === 'playing' || phase === 'countdown') && !engineRef.current && song && beatMap) {
+        if ((phase === 'playing' || phase === 'countdown') && 
+            !engineRef.current && 
+            !initializingRef.current && 
+            song?.audioBuffer && 
+            beatMap) {
+            
+            initializingRef.current = true;
+
             const mixer = new AudioMixer();
             mixerRef.current = mixer;
             mixer.setMusicVolume(useGameStore.getState().musicVolume);

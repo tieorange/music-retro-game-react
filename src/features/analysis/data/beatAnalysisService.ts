@@ -63,6 +63,16 @@ export class BeatAnalysisService {
 
                 alignedStrengths = tracked.strengths.slice(downbeatPhase);
                 alignmentConfidence = computeBeatAlignmentConfidence(envelopeData.envelope, tracked.frames);
+
+                // Ensure strengths array matches onsetBeats length exactly
+                if (onsetBeats.length > 0) {
+                    if (alignedStrengths.length > onsetBeats.length) {
+                        alignedStrengths = alignedStrengths.slice(0, onsetBeats.length);
+                    } else if (alignedStrengths.length < onsetBeats.length) {
+                        const padding: number[] = new Array(onsetBeats.length - alignedStrengths.length).fill(0);
+                        alignedStrengths = alignedStrengths.concat(padding);
+                    }
+                }
             }
 
             const gridBeats = buildGridBeats(offset, duration, beatInterval);

@@ -1,4 +1,4 @@
-import { Container, Graphics, Text, TextStyle } from 'pixi.js';
+import { Container, Graphics, Text, TextStyle, FillGradient } from 'pixi.js';
 import { LANE_COUNT, LANE_COLORS, LANE_KEYS } from '@/features/gameplay/domain/constants';
 
 export class LaneRenderer extends Container {
@@ -10,6 +10,8 @@ export class LaneRenderer extends Container {
     private laneGlows: Graphics[] = [];
     private laneTensions: Graphics[] = [];
     private keyLabels: Text[] = [];
+    private dividerContainer = new Container();
+    private scrollOffset: number = 0;
 
     constructor(width: number, height: number, laneCount: number = LANE_COUNT) {
         super();
@@ -26,6 +28,8 @@ export class LaneRenderer extends Container {
         bg.fill({ color: 0x0a0a1a, alpha: 0.8 });
         this.addChild(bg);
 
+        this.addChild(this.dividerContainer);
+
         const labelStyle = new TextStyle({
             fontFamily: '"Press Start 2P", monospace',
             fontSize: 10,
@@ -38,9 +42,11 @@ export class LaneRenderer extends Container {
             // Divider line
             if (i > 0) {
                 const divider = new Graphics();
-                divider.rect(laneX - 1, 0, 2, this.renderHeight);
-                divider.fill({ color: 0xffffff, alpha: 0.1 });
-                this.addChild(divider);
+                for (let y = -80; y < this.renderHeight + 80; y += 40) {
+                    divider.rect(laneX - 1, y, 2, 20);
+                }
+                divider.fill({ color: 0xffffff, alpha: 0.15 });
+                this.dividerContainer.addChild(divider);
             }
 
             // Tension glow
@@ -51,10 +57,19 @@ export class LaneRenderer extends Container {
             this.addChild(tension);
             this.laneTensions.push(tension);
 
-            // Flash glow (on key press)
+            // Flash glow (on key press) - Vertical gradient beam
             const flash = new Graphics();
+            const grad = new FillGradient(0, 0, 0, this.renderHeight);
+            const r = (LANE_COLORS[i % LANE_COLORS.length] >> 16) & 255;
+            const g = (LANE_COLORS[i % LANE_COLORS.length] >> 8) & 255;
+            const b = LANE_COLORS[i % LANE_COLORS.length] & 255;
+
+            grad.addColorStop(0, 'rgba(255, 255, 255, 0)');
+            grad.addColorStop(0.5, `rgba(${r}, ${g}, ${b}, 0.2)`);
+            grad.addColorStop(1, `rgba(${r}, ${g}, ${b}, 1)`);
+
             flash.rect(laneX + 2, 0, this.laneWidth - 4, this.renderHeight);
-            flash.fill({ color: 0xffffff, alpha: 1.0 });
+            flash.fill(grad);
             flash.alpha = 0;
             this.addChild(flash);
             this.laneGlows.push(flash);
@@ -70,10 +85,15 @@ export class LaneRenderer extends Container {
     }
 
     public update(dt: number) {
+        // Scroll dividers
+        this.scrollOffset += 8 * dt; // Adjust speed as needed
+        this.scrollOffset %= 40; // Wrap at dash spacing
+        this.dividerContainer.y = this.scrollOffset;
+
         for (let i = 0; i < this.laneGlows.length; i++) {
             const glow = this.laneGlows[i];
             if (glow.alpha > 0) {
-                glow.alpha = Math.max(0, glow.alpha - 0.05 * dt);
+                glow.alpha = Math.max(0, glow.alpha - 0.08 * dt);
                 if (glow.alpha === 0) {
                     this.keyLabels[i].style.fill = 0x666666;
                 }
@@ -88,7 +108,7 @@ export class LaneRenderer extends Container {
 
     public flashLane(laneIndex: number) {
         if (this.laneGlows[laneIndex]) {
-            this.laneGlows[laneIndex].alpha = 0.4;
+            this.laneGlows[laneIndex].alpha = 0.8;
             this.keyLabels[laneIndex].style.fill = 0xffffff;
         }
     }

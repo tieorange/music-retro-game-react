@@ -1,4 +1,4 @@
-import { AdvancedBloomFilter, CRTFilter, GlitchFilter } from 'pixi-filters';
+import { AdvancedBloomFilter, CRTFilter, GlitchFilter, RGBSplitFilter } from 'pixi-filters';
 import { Container } from 'pixi.js';
 
 export function applyGameEffects(stage: Container) {
@@ -32,12 +32,18 @@ export function applyGameEffects(stage: Container) {
     });
     glitch.enabled = false; // Add dynamically on misses
 
+    const aberration = new RGBSplitFilter({
+        red: { x: 0, y: 0 },
+        green: { x: 0, y: 0 },
+        blue: { x: 0, y: 0 }
+    });
+
     // Note: in v8, filters array assignment is strict, might need to cast or apply directly
     if (isMobile) {
         stage.filters = [bloom] as any;
     } else {
-        stage.filters = [bloom, crt, glitch] as any;
+        stage.filters = [bloom, crt, glitch, aberration] as any;
     }
 
-    return { bloom, crt, glitch, isMobile };
+    return { bloom, crt, glitch, aberration, isMobile };
 }

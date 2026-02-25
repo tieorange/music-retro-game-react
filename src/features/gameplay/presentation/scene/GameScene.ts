@@ -1,4 +1,5 @@
-import { Container, Application, Graphics } from 'pixi.js';
+import { Container, Application } from 'pixi.js';
+import * as Tone from 'tone';
 import { GameEngine } from '../../application/GameEngine';
 import { LaneRenderer } from './LaneRenderer';
 import { NoteRenderer } from './NoteRenderer';
@@ -57,14 +58,7 @@ export class GameScene extends Container {
         }
 
         this.notes = new NoteRenderer(laneXPositions, hitZoneY, -50);
-        const g = new Graphics();
-        g.moveTo(0, -15);
-        g.lineTo(15, 0);
-        g.lineTo(0, 15);
-        g.lineTo(-15, 0);
-        g.fill({ color: 0xffffff });
-        const noteTexture = app.renderer.generateTexture(g);
-        this.notes.init(noteTexture);
+        this.notes.init();
 
         this.addChild(this.notes);
 
@@ -109,7 +103,9 @@ export class GameScene extends Container {
             this.engine.score,
             this.engine.currentCombo,
             this.engine.currentMultiplier,
-            this.app.screen.width
+            this.app.screen.width,
+            this.engine.beatMap.bpm,
+            Tone.Transport.seconds
         );
         this.hitZone.update(time, dtFrame);
         this.hitZone.decayPads(dtFrame);

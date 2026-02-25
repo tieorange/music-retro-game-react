@@ -41,49 +41,71 @@ export function SongUploadScreen() {
 
     return (
         <Layout>
+            {/* Animated Background Grid */}
+            <div className="absolute inset-0 pointer-events-none overflow-hidden z-0 opacity-20">
+                <div
+                    className="absolute inset-0 bg-[linear-gradient(rgba(0,255,255,0.3)_1px,transparent_1px),linear-gradient(90deg,rgba(0,255,255,0.3)_1px,transparent_1px)] bg-[size:50px_50px]"
+                    style={{
+                        transform: 'perspective(500px) rotateX(60deg) translateY(-100px) translateZ(-200px)',
+                        animation: 'grid-move 10s linear infinite',
+                    }}
+                />
+            </div>
+            {/* Keyframes for grid movement */}
+            <style>{`
+                @keyframes grid-move {
+                    0% { background-position: 0px 0px; }
+                    100% { background-position: 0px 50px; }
+                }
+            `}</style>
+
             <motion.div
                 className="flex flex-col items-center justify-center space-y-8 max-w-2xl w-full"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5 }}
             >
-                <div className="text-center space-y-4">
-                    <h1 className="text-4xl md:text-6xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-neon-cyan via-neon-magenta to-neon-yellow drop-shadow-[0_0_15px_rgba(255,0,255,0.8)]">
+                <div className="text-center space-y-4 relative z-10">
+                    <motion.h1
+                        className="text-5xl md:text-7xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-neon-cyan via-white to-neon-magenta drop-shadow-[0_0_20px_rgba(255,0,255,0.8)] leading-tight"
+                        animate={{ opacity: [1, 0.8, 1, 0.5, 1] }}
+                        transition={{ repeat: Infinity, duration: 4, times: [0, 0.1, 0.2, 0.3, 1] }}
+                    >
                         PIXELBEAT
-                    </h1>
+                    </motion.h1>
                     <p className="text-xl text-slate-300">Synthwave Rhythm Action</p>
                 </div>
 
                 <DropZone onFileAccepted={handleFileAccepted} />
 
-                <div className="w-full grid grid-cols-2 gap-3">
+                <div className="w-full grid grid-cols-2 gap-4 relative z-10">
                     <Button
                         type="button"
                         onClick={() => setMode('classic')}
                         className={mode === 'classic'
-                            ? 'bg-neon-cyan text-black'
-                            : 'bg-slate-800 text-slate-200 border border-slate-600 hover:bg-slate-700'}
+                            ? 'bg-neon-cyan text-black border-b-4 border-r-4 border-cyan-800 scale-105 font-bold shadow-[0_0_15px_rgba(0,255,255,0.6)]'
+                            : 'bg-slate-900 text-slate-400 border border-slate-700 hover:bg-slate-800 hover:text-white transition-all'}
                     >
-                        CLASSIC (D/F/J/K)
+                        CLASSIC<br /><span className="text-xs opacity-70">(D/F/J/K)</span>
                     </Button>
                     <Button
                         type="button"
                         onClick={() => setMode('trackpad')}
                         className={mode === 'trackpad'
-                            ? 'bg-neon-green text-black'
-                            : 'bg-slate-800 text-slate-200 border border-slate-600 hover:bg-slate-700'}
+                            ? 'bg-neon-green text-black border-b-4 border-r-4 border-green-800 scale-105 font-bold shadow-[0_0_15px_rgba(0,255,0,0.6)]'
+                            : 'bg-slate-900 text-slate-400 border border-slate-700 hover:bg-slate-800 hover:text-white transition-all'}
                     >
-                        SPACEBAR ONLY (1 BUTTON)
+                        TRACKPAD<br /><span className="text-xs opacity-70">(SPACEBAR)</span>
                     </Button>
                 </div>
 
-                <div className="w-full grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="w-full grid grid-cols-2 md:grid-cols-4 gap-3 relative z-10">
                     <Button
                         type="button"
                         onClick={() => setDifficulty('easy')}
                         className={difficulty === 'easy'
-                            ? 'bg-neon-green text-black'
-                            : 'bg-slate-800 text-slate-200 border border-slate-600 hover:bg-slate-700'}
+                            ? 'bg-neon-green text-black font-bold shadow-[0_0_10px_rgba(0,255,0,0.5)]'
+                            : 'bg-slate-900 text-slate-400 border border-slate-700 hover:bg-slate-800 transition-all'}
                     >
                         EASY
                     </Button>
@@ -91,8 +113,8 @@ export function SongUploadScreen() {
                         type="button"
                         onClick={() => setDifficulty('normal')}
                         className={difficulty === 'normal'
-                            ? 'bg-neon-cyan text-black'
-                            : 'bg-slate-800 text-slate-200 border border-slate-600 hover:bg-slate-700'}
+                            ? 'bg-neon-cyan text-black font-bold shadow-[0_0_10px_rgba(0,255,255,0.5)]'
+                            : 'bg-slate-900 text-slate-400 border border-slate-700 hover:bg-slate-800 transition-all'}
                     >
                         NORMAL
                     </Button>
@@ -100,8 +122,8 @@ export function SongUploadScreen() {
                         type="button"
                         onClick={() => setDifficulty('hard')}
                         className={difficulty === 'hard'
-                            ? 'bg-neon-magenta text-black'
-                            : 'bg-slate-800 text-slate-200 border border-slate-600 hover:bg-slate-700'}
+                            ? 'bg-neon-magenta text-black font-bold shadow-[0_0_10px_rgba(255,0,255,0.5)]'
+                            : 'bg-slate-900 text-slate-400 border border-slate-700 hover:bg-slate-800 transition-all'}
                     >
                         HARD
                     </Button>
@@ -109,8 +131,8 @@ export function SongUploadScreen() {
                         type="button"
                         onClick={() => setDifficulty('expert')}
                         className={difficulty === 'expert'
-                            ? 'bg-neon-yellow text-black'
-                            : 'bg-slate-800 text-slate-200 border border-slate-600 hover:bg-slate-700'}
+                            ? 'bg-neon-yellow text-black font-bold shadow-[0_0_10px_rgba(255,255,0,0.5)]'
+                            : 'bg-slate-900 text-slate-400 border border-slate-700 hover:bg-slate-800 transition-all'}
                     >
                         EXPERT
                     </Button>

@@ -7,6 +7,7 @@ export class HUDRenderer extends Container {
     private multiplierBanner: Graphics;
     private multiplierText: Text;
     private fcBadge: Text;
+    private bpmText: Text;
 
     private targetScore: number = 0;
     private displayedScore: number = 0;
@@ -62,6 +63,19 @@ export class HUDRenderer extends Container {
         this.fcBadge.y = 20;
         this.addChild(this.fcBadge);
 
+        this.bpmText = new Text({
+            text: 'BPM',
+            style: new TextStyle({
+                ...baseStyle,
+                fontSize: 14,
+                fill: 0xffffff,
+                dropShadow: { color: 0x00ffff, blur: 4, ...shadowDefaults }
+            })
+        });
+        this.bpmText.x = 20;
+        this.bpmText.y = height - 40;
+        this.addChild(this.bpmText);
+
         this.multiplierBanner = new Graphics();
         this.addChild(this.multiplierBanner);
 
@@ -83,7 +97,14 @@ export class HUDRenderer extends Container {
         });
     }
 
-    public update(dt: number, realScore: number, combo: number, multiplier: number, width: number) {
+    public update(dt: number, realScore: number, combo: number, multiplier: number, width: number, bpm: number, transportSeconds: number) {
+        // Pulse BPM text based on transport time
+        const bps = bpm / 60;
+        const beatPhase = (transportSeconds * bps) % 1; // 0 to 1 over one beat
+        const pulse = Math.max(0, 1 - beatPhase * 4) * 0.2; // sharp spike at the start of the beat
+
+        this.bpmText.text = `BPM: ${Math.round(bpm)}`;
+        this.bpmText.scale.set(1 + pulse);
         // Score lerp & bounce
         if (realScore > this.targetScore) {
             this.targetScore = realScore;

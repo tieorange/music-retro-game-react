@@ -85,14 +85,21 @@ export function GameplayScreen() {
     useEffect(() => {
         if (!app || !engine) return;
 
-        // Create scene early to see visuals during countdown
-        const scene = new GameScene(app, engine, mode);
-        app.stage.addChild(scene);
+        console.log('Creating GameScene...');
+        try {
+            // Create scene early to see visuals during countdown
+            const scene = new GameScene(app, engine, mode);
+            app.stage.addChild(scene);
+            console.log('GameScene created successfully');
 
-        return () => {
-            app.stage.removeChild(scene);
-            scene.destroy(true);
-        };
+            return () => {
+                console.log('Destroying GameScene');
+                app.stage.removeChild(scene);
+                scene.destroy(true);
+            };
+        } catch (error) {
+            console.error('Failed to create GameScene:', error);
+        }
     }, [app, engine]);
 
     const handleAudioUnlock = async () => {

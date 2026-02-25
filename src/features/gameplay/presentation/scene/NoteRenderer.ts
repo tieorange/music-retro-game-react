@@ -1,15 +1,15 @@
-import { Container, Graphics, Sprite, Texture } from 'pixi.js';
+import { Container, Graphics, FillGradient } from 'pixi.js';
 import { ActiveNote } from '../../domain/NoteTracker';
 import { NOTE_FALL_DURATION, LANE_COLORS } from '@/features/gameplay/domain/constants';
 
 class VisualNote extends Container {
-    public sprite: Sprite;
+    public body: Graphics;
     public glow: Graphics;
     public trail: Graphics;
     public isSpawned: boolean = false;
     public lifeTime: number = 0;
 
-    constructor(texture: Texture) {
+    constructor() {
         super();
 
         this.trail = new Graphics();
@@ -18,16 +18,27 @@ class VisualNote extends Container {
         this.glow = new Graphics();
         this.addChild(this.glow);
 
-        this.sprite = new Sprite(texture);
-        this.sprite.anchor.set(0.5);
-        this.addChild(this.sprite);
+        this.body = new Graphics();
+        this.addChild(this.body);
     }
 
     public setup(color: number) {
-        this.sprite.tint = color;
         this.glow.clear();
-        this.glow.circle(0, 0, 20);
-        this.glow.fill({ color, alpha: 0.4 });
+        this.glow.circle(0, 0, 25);
+        this.glow.fill({ color, alpha: 0.3 });
+        this.glow.circle(0, 0, 16);
+        this.glow.fill({ color, alpha: 0.6 });
+
+        this.body.clear();
+        const grad = new FillGradient(0, -10, 0, 10);
+        grad.addColorStop(0, 0xffffff);
+        grad.addColorStop(0.3, color);
+        grad.addColorStop(1, 0x111122);
+
+        this.body.roundRect(-24, -10, 48, 20, 10);
+        this.body.fill(grad);
+        this.body.stroke({ color: 0xffffff, width: 2, alpha: 0.8 });
+
         this.isSpawned = true;
         this.lifeTime = 0;
         this.scale.set(0); // Pop-in start
@@ -63,7 +74,6 @@ export class NoteRenderer extends Container {
     private laneXPositions: number[];
     private hitZoneY: number;
     private spawnY: number;
-    private noteTexture!: Texture;
 
     constructor(laneXPositions: number[], hitZoneY: number, spawnY: number) {
         super();
@@ -72,15 +82,13 @@ export class NoteRenderer extends Container {
         this.spawnY = spawnY;
     }
 
-    public init(texture: Texture) {
-        this.noteTexture = texture;
+    public init() {
         for (let i = 0; i < 50; i++) {
-            this.pool.push(new VisualNote(texture));
+            this.pool.push(new VisualNote());
         }
     }
 
     public update(currentTime: number, activeNotes: ActiveNote[]) {
-        if (!this.noteTexture) return;
 
         const currentFrameNotes = new Set<string>();
 
@@ -97,7 +105,7 @@ export class NoteRenderer extends Container {
                 if (this.pool.length > 0) {
                     vNote = this.pool.pop()!;
                 } else {
-                    vNote = new VisualNote(this.noteTexture);
+                    vNote = new VisualNote();
                 }
                 vNote.setup(color);
                 vNote.x = this.laneXPositions[note.lane];
