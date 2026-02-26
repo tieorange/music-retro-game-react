@@ -1,0 +1,36 @@
+services:
+  - type: web
+    name: pixelbeat-api
+    env: docker
+    dockerContext: backend
+    dockerfilePath: Dockerfile
+    plan: free
+    region: ohio
+    envVars:
+      - key: PORT
+        value: 3000
+      - key: NODE_ENV
+        value: production
+    healthCheckPath: /healthz
+
+  - type: worker
+    name: pixelbeat-worker
+    env: docker
+    dockerContext: backend
+    dockerfilePath: Dockerfile
+    dockerCommand: npm run start:worker
+    plan: free
+    region: ohio
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+databases:
+  - name: pixelbeat-db
+    plan: free
+    region: ohio
+
+redis:
+  - name: pixelbeat-redis
+    plan: free
+    region: ohio

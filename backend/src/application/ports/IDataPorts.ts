@@ -1,5 +1,5 @@
-import { ImportJob } from '../domain/entities/ImportJob.js';
-import { Track } from '../domain/entities/Track.js';
+import { ImportJob } from '../../domain/entities/ImportJob.js';
+import { Track } from '../../domain/entities/Track.js';
 
 export interface IImportJobRepository {
     save(job: ImportJob): Promise<void>;

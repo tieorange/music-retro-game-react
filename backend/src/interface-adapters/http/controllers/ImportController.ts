@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
-import { CreateImportJobUseCase } from '../../application/use-cases/CreateImportJobUseCase';
-import { GetImportJobStatusUseCase } from '../../application/use-cases/GetImportJobStatusUseCase';
+import { CreateImportJobUseCase } from '../../../application/use-cases/CreateImportJobUseCase.js';
+import { GetImportJobStatusUseCase } from '../../../application/use-cases/GetImportJobStatusUseCase.js';
 
 export class ImportController {
     constructor(
