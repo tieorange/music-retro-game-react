@@ -9,6 +9,7 @@ import { type BuiltInSong } from '../data/builtInSongs';
 import { Button } from '@/core/ui/button';
 import { Layout } from '@/core/ui/Layout';
 import { nanoid } from 'nanoid';
+import { YouTubeImportPanel } from './YouTubeImportPanel';
 
 export function SongUploadScreen() {
     const setSong = useGameStore((state) => state.setSong);
@@ -39,7 +40,8 @@ export function SongUploadScreen() {
                 setSong({
                     id: nanoid(),
                     name: selectedBuiltIn.name,
-                    file: new File([], selectedBuiltIn.name),
+                    sourceType: 'builtin',
+                    file: null,
                     audioBuffer,
                     duration: audioBuffer.duration,
                 });
@@ -54,12 +56,29 @@ export function SongUploadScreen() {
                 setSong({
                     id: nanoid(),
                     name: selectedFile.name.replace(/\.[^/.]+$/, ''),
+                    sourceType: 'upload',
                     file: selectedFile,
                     audioBuffer,
                     duration: audioBuffer.duration,
                 });
                 setPhase('analyzing');
             }
+        }
+    };
+
+    const handleYoutubeImportComplete = async (audioUrl: string, title: string) => {
+        const audioBuffer = await decodeUrl(audioUrl, title);
+        if (audioBuffer) {
+            setSong({
+                id: nanoid(),
+                name: title,
+                sourceType: 'youtube',
+                file: null,
+                sourceUrl: audioUrl,
+                audioBuffer,
+                duration: audioBuffer.duration,
+            });
+            setPhase('analyzing');
         }
     };
 
@@ -103,6 +122,10 @@ export function SongUploadScreen() {
                 </div>
 
                 <DropZone onFileAccepted={handleFileAccepted} />
+
+                <div className="w-full relative z-10">
+                    <YouTubeImportPanel onImportComplete={handleYoutubeImportComplete} />
+                </div>
 
                 <BuiltInSongPicker selected={selectedBuiltIn} onSelect={handleBuiltInSelected} />
 
